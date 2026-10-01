@@ -1,0 +1,22 @@
+{
+  "comment": "11 类建筑：尺寸档 大 8×5 / 中 6×5 / 小 5×4；除家外 10 栋按章发放全部条目。optional 建筑由人生阶段控制；npc 为台词角色池；icon 为 8×8 招牌图形。",
+  "buildings": [
+    { "id": "home", "name": "家", "size": [5, 4], "icon": "home", "chapters": [], "npcs": [], "optional": false, "color": 8 },
+    { "id": "hospital", "name": "社区医院", "size": [8, 5], "icon": "cross", "chapters": [1, 2, 16, 24, 28, 34], "npcs": ["医生", "护士", "药师"], "optional": false, "color": 9 },
+    { "id": "rescue", "name": "急救站", "size": [6, 5], "icon": "shield", "chapters": [13], "npcs": ["急救员", "消防员"], "optional": false, "color": 10 },
+    { "id": "bank", "name": "银行与保险", "size": [6, 5], "icon": "yen", "chapters": [5], "npcs": ["柜员", "理财经理"], "optional": false, "color": 11 },
+    { "id": "market", "name": "集市", "size": [8, 5], "icon": "basket", "chapters": [6], "npcs": ["摊主", "老主顾"], "optional": false, "color": 12 },
+    { "id": "hr", "name": "人社大院", "size": [6, 5], "icon": "brief", "chapters": [7, 19, 23], "npcs": ["劳动监察员", "招聘专员"], "optional": false, "color": 13 },
+    { "id": "police", "name": "派出所与法援", "size": [6, 5], "icon": "badge", "chapters": [8, 9, 11, 14, 21], "npcs": ["民警", "法律律师"], "optional": false, "color": 14 },
+    { "id": "school", "name": "学校与培训", "size": [8, 5], "icon": "book", "chapters": [3, 4, 30, 31, 32], "npcs": ["老师", "辅导员"], "optional": false, "color": 15 },
+    { "id": "community", "name": "社区服务中心", "size": [8, 5], "icon": "hands", "chapters": [10, 15, 17, 18, 20, 25, 27, 29, 33], "npcs": ["社工", "网格员"], "optional": false, "color": 16 },
+    { "id": "park", "name": "公园", "size": [5, 4], "icon": "tree", "chapters": [22], "npcs": ["晨练的老人", "遛狗的人"], "optional": false, "color": 17 },
+    { "id": "incubator", "name": "创业园", "size": [6, 5], "icon": "rocket", "chapters": [12, 26], "npcs": ["孵化器导师"], "optional": true, "color": 18 }
+  ],
+  "hotlines": [
+    { "num": "120", "label": "急救" },
+    { "num": "110", "label": "报警" },
+    { "num": "96110", "label": "反诈专线" },
+    { "num": "12356", "label": "心理援助热线" }
+  ]
+}

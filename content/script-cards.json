@@ -1,0 +1,31 @@
+{
+  "comment": "剧本牌 20 张：出身 4、体质 5、性格 5、职业 6。开局抽四张（每类一张），可整套重抽一次（opts.reroll）。数值为游戏设定。",
+  "origin": [
+    { "id": "poor", "name": "拮据", "desc": "手里只有 -10 千元，收入打八折，对钱格外敏感。", "mods": { "savings": -10, "income": 800, "scamW": 1200 } },
+    { "id": "normal", "name": "普通", "desc": "20 千元积蓄，收入按平均走。", "mods": { "savings": 20, "income": 1000 } },
+    { "id": "rich", "name": "宽裕", "desc": "60 千元积蓄，收入高一线，骗局也多看一眼。", "mods": { "savings": 60, "income": 1150, "scamW": 1100 } },
+    { "id": "sick", "name": "家里有病人", "desc": "积蓄 0，收入九折；医疗支出与家人患病类事件更常找上门。", "mods": { "savings": 0, "income": 900, "medicalW": 1500 } }
+  ],
+  "physique": [
+    { "id": "strong", "name": "强健", "desc": "起始健康 100，慢性病类遭遇权重打六折。", "mods": { "health": 0, "chronicW": 600 } },
+    { "id": "average", "name": "普通", "desc": "起始健康 92。", "mods": { "health": -8 } },
+    { "id": "tired", "name": "易疲劳", "desc": "起始健康 85、精力 -10，过劳类遭遇更常见。", "mods": { "health": -15, "energy": -10, "overworkW": 1400 } },
+    { "id": "famHyp", "name": "家族高血压", "desc": "起始健康 90；血压与心血管类遭遇权重 ×2。", "mods": { "health": -10, "cardioW": 2000 } },
+    { "id": "famDia", "name": "家族糖尿病", "desc": "起始健康 90；血糖类遭遇权重 ×2。", "mods": { "health": -10, "diaW": 2000 } }
+  ],
+  "personality": [
+    { "id": "cautious", "name": "谨慎", "desc": "毅力槽上限 +1，识破话术更容易。", "mods": { "willMod": 1, "identify": 15 } },
+    { "id": "impulsive", "name": "冲动", "desc": "毅力槽上限 -1，催促类话术更难识破。", "mods": { "willMod": -1, "identify": -15 } },
+    { "id": "warm", "name": "热心", "desc": "求助类话术容易心软，花钱求助便宜三成。", "mods": { "helpDiscount": 30 } },
+    { "id": "introvert", "name": "内向", "desc": "陌生人出现更少（×0.7），拒绝诱惑不伤自由。", "mods": { "strangerW": 700 } },
+    { "id": "competitive", "name": "好胜", "desc": "习惯发动削威胁强一成五。", "mods": { "habitCut": 1150 } }
+  ],
+  "job": [
+    { "id": "office", "name": "上班族", "desc": "收入 ×1.0，章末波动小（±10%）。", "mods": { "income": 1000, "vol": 1000 } },
+    { "id": "blue", "name": "蓝领", "desc": "收入 ×1.15；工伤与夜班类遭遇权重 ×2。", "mods": { "income": 1150, "injuryW": 2000, "vol": 1100 } },
+    { "id": "coder", "name": "程序员", "desc": "收入 ×1.5；久坐、过劳与技术法律类遭遇权重 ×1.5。", "mods": { "income": 1500, "overworkW": 1500, "techW": 1500, "vol": 1200 } },
+    { "id": "freelance", "name": "自由职业", "desc": "收入 ×0.85，章末波动大（±25%）。", "mods": { "income": 850, "vol": 1250 } },
+    { "id": "founder", "name": "创业者", "desc": "收入 ×1.3，波动 ±40%；创业类遭遇权重 ×2。", "mods": { "income": 1300, "startupW": 2000, "vol": 1400 } },
+    { "id": "civil", "name": "公务员", "desc": "收入 ×0.8，波动极小（±5%）；合规红线类遭遇权重 ×1.5。", "mods": { "income": 800, "redlineW": 1500, "vol": 950 } }
+  ]
+}

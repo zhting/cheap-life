@@ -1,0 +1,1602 @@
+{
+ "comment": "预防型遭遇 48 个模板（含 3 个 rare 灾害事件，每章 8% 概率替换一个普通遭遇）。威胁 40-100；intent 为敌人意图（打哪条状态、预计伤害）；help 为花钱求助（金额由遭遇给定，削减固定 25）。机遇事件（chance）每章 12% 出现，取自第 7、24 章的免费筛查/公益培训/补贴窗口。急救型遭遇由 24 道题在运行时生成，不在此列。",
+ "encounters": [
+  {
+   "id": "car-bump",
+   "kind": "prevent",
+   "name": "车祸剐蹭",
+   "sprite": "car",
+   "ages": [
+    18,
+    80
+   ],
+   "weight": 9,
+   "tags": [
+    "traffic"
+   ],
+   "threat": 55,
+   "intent": [
+    {
+     "bar": "h",
+     "dmg": 3
+    },
+    {
+     "bar": "m",
+     "dmg": 2
+    }
+   ],
+   "help": {
+    "label": "报警并叫保险定损",
+    "cost": 2,
+    "cut": 25
+   },
+   "desc": "路口一辆车抢黄灯，你和它擦上了。"
+  },
+  {
+   "id": "ebike-fall",
+   "kind": "prevent",
+   "name": "电动车摔倒",
+   "sprite": "car",
+   "ages": [
+    18,
+    75
+   ],
+   "weight": 8,
+   "tags": [
+    "traffic",
+    "fall"
+   ],
+   "threat": 50,
+   "intent": [
+    {
+     "bar": "h",
+     "dmg": 3
+    }
+   ],
+   "help": {
+    "label": "打车去医院拍个片",
+    "cost": 2,
+    "cut": 25
+   },
+   "desc": "雨天路滑，前面电动车急刹，你连人带车摔了出去。"
+  },
+  {
+   "id": "kitchen-fire",
+   "kind": "prevent",
+   "name": "厨房起火",
+   "sprite": "flame",
+   "ages": [
+    18,
+    80
+   ],
+   "weight": 8,
+   "tags": [
+    "fire",
+    "gas"
+   ],
+   "threat": 60,
+   "intent": [
+    {
+     "bar": "h",
+     "dmg": 3
+    },
+    {
+     "bar": "m",
+     "dmg": 4
+    }
+   ],
+   "help": {
+    "label": "请人检修线路和燃气",
+    "cost": 3,
+    "cut": 25
+   },
+   "desc": "锅里烧着油，人转身接了个电话。"
+  },
+  {
+   "id": "gas-leak",
+   "kind": "prevent",
+   "name": "燃气泄漏",
+   "sprite": "gas",
+   "ages": [
+    18,
+    80
+   ],
+   "weight": 6,
+   "tags": [
+    "gas",
+    "fire"
+   ],
+   "threat": 65,
+   "intent": [
+    {
+     "bar": "h",
+     "dmg": 4
+    }
+   ],
+   "help": {
+    "label": "请燃气公司上门检修",
+    "cost": 2,
+    "cut": 25
+   },
+   "desc": "进门一股臭鸡蛋味，灶边的软管老得发硬。"
+  },
+  {
+   "id": "co-winter",
+   "kind": "prevent",
+   "name": "冬夜煤烟",
+   "sprite": "gas",
+   "ages": [
+    18,
+    85
+   ],
+   "weight": 5,
+   "tags": [
+    "gas"
+   ],
+   "threat": 60,
+   "intent": [
+    {
+     "bar": "h",
+     "dmg": 4
+    }
+   ],
+   "help": {
+    "label": "装一氧化碳报警器",
+    "cost": 2,
+    "cut": 25
+   },
+   "desc": "屋里烧炭取暖，一屋子人都有点头痛。"
+  },
+  {
+   "id": "flood-basement",
+   "kind": "prevent",
+   "name": "暴雨倒灌",
+   "sprite": "storm",
+   "ages": [
+    18,
+    80
+   ],
+   "weight": 5,
+   "tags": [
+    "outdoor",
+    "rent"
+   ],
+   "threat": 45,
+   "intent": [
+    {
+     "bar": "m",
+     "dmg": 2
+    },
+    {
+     "bar": "e",
+     "dmg": 2
+    }
+   ],
+   "help": {
+    "label": "请人疏通加挡水板",
+    "cost": 2,
+    "cut": 25
+   },
+   "desc": "一夜暴雨，楼下积水漫过了门槛。"
+  },
+  {
+   "id": "heat-hit",
+   "kind": "prevent",
+   "name": "高温中暑",
+   "sprite": "sun",
+   "ages": [
+    18,
+    85
+   ],
+   "weight": 6,
+   "tags": [
+    "outdoor"
+   ],
+   "threat": 50,
+   "intent": [
+    {
+     "bar": "h",
+     "dmg": 3
+    }
+   ],
+   "help": {
+    "label": "买补水盐水和降温装备",
+    "cost": 1,
+    "cut": 25
+   },
+   "desc": "连续高温，户外走了一圈人就发晕。"
+  },
+  {
+   "id": "cold-hike",
+   "kind": "prevent",
+   "name": "山里失温",
+   "sprite": "snow",
+   "ages": [
+    18,
+    70
+   ],
+   "weight": 4,
+   "tags": [
+    "outdoor"
+   ],
+   "threat": 55,
+   "intent": [
+    {
+     "bar": "h",
+     "dmg": 4
+    }
+   ],
+   "help": {
+    "label": "进山前租一套保温装备",
+    "cost": 2,
+    "cut": 25
+   },
+   "desc": "山里变天，浑身湿透，开始止不住地抖。"
+  },
+  {
+   "id": "quake",
+   "kind": "prevent",
+   "rare": true,
+   "name": "地震",
+   "sprite": "storm",
+   "ages": [
+    18,
+    85
+   ],
+   "weight": 3,
+   "tags": [
+    "outdoor",
+    "buy-house"
+   ],
+   "threat": 75,
+   "intent": [
+    {
+     "bar": "h",
+     "dmg": 4
+    },
+    {
+     "bar": "m",
+     "dmg": 2
+    }
+   ],
+   "help": {
+    "label": "按规范加固并备应急包",
+    "cost": 4,
+    "cut": 25
+   },
+   "desc": "大地晃了一下，吊灯还在摇。"
+  },
+  {
+   "id": "storm-night",
+   "kind": "prevent",
+   "rare": true,
+   "name": "雷雨夜",
+   "sprite": "storm",
+   "ages": [
+    18,
+    85
+   ],
+   "weight": 3,
+   "tags": [
+    "outdoor"
+   ],
+   "threat": 60,
+   "intent": [
+    {
+     "bar": "h",
+     "dmg": 3
+    },
+    {
+     "bar": "m",
+     "dmg": 2
+    }
+   ],
+   "help": {
+    "label": "检查电路和避雷",
+    "cost": 2,
+    "cut": 25
+   },
+   "desc": "雷劈在近处，半条街断了电。"
+  },
+  {
+   "id": "snake-field",
+   "kind": "prevent",
+   "name": "草丛蛇咬",
+   "sprite": "snake",
+   "ages": [
+    18,
+    75
+   ],
+   "weight": 4,
+   "tags": [
+    "outdoor"
+   ],
+   "threat": 55,
+   "intent": [
+    {
+     "bar": "h",
+     "dmg": 4
+    }
+   ],
+   "help": {
+    "label": "提前打听有血清的医院",
+    "cost": 2,
+    "cut": 25
+   },
+   "desc": "拨草丛的时候，脚边窜过一道花纹。"
+  },
+  {
+   "id": "mushroom",
+   "kind": "prevent",
+   "name": "毒蘑菇",
+   "sprite": "mushroom",
+   "ages": [
+    18,
+    85
+   ],
+   "weight": 4,
+   "tags": [
+    "poison"
+   ],
+   "threat": 70,
+   "intent": [
+    {
+     "bar": "h",
+     "dmg": 4
+    }
+   ],
+   "help": {
+    "label": "只买市场里的栽培菌",
+    "cost": 1,
+    "cut": 25
+   },
+   "desc": "山上采的野蘑菇，颜色朴素，味道鲜美。"
+  },
+  {
+   "id": "food-bad",
+   "kind": "prevent",
+   "name": "食物中毒",
+   "sprite": "food",
+   "ages": [
+    18,
+    85
+   ],
+   "weight": 6,
+   "tags": [
+    "poison",
+    "diet"
+   ],
+   "threat": 45,
+   "intent": [
+    {
+     "bar": "h",
+     "dmg": 2
+    },
+    {
+     "bar": "e",
+     "dmg": 2
+    }
+   ],
+   "help": {
+    "label": "去医院补液",
+    "cost": 2,
+    "cut": 25
+   },
+   "desc": "隔夜的剩菜没热透，半夜开始上吐下泻。"
+  },
+  {
+   "id": "med-wrong",
+   "kind": "prevent",
+   "name": "服错药",
+   "sprite": "pill",
+   "ages": [
+    18,
+    85
+   ],
+   "weight": 5,
+   "tags": [
+    "poison",
+    "first-aid"
+   ],
+   "threat": 60,
+   "intent": [
+    {
+     "bar": "h",
+     "dmg": 4
+    }
+   ],
+   "help": {
+    "label": "请药师帮你整理药盒",
+    "cost": 1,
+    "cut": 25
+   },
+   "desc": "两个药盒长得一样，你拿错了一板。"
+  },
+  {
+   "id": "ladder-fall",
+   "kind": "prevent",
+   "name": "梯子坠落",
+   "sprite": "elder",
+   "ages": [
+    18,
+    75
+   ],
+   "weight": 5,
+   "tags": [
+    "fall"
+   ],
+   "threat": 55,
+   "intent": [
+    {
+     "bar": "h",
+     "dmg": 4
+    }
+   ],
+   "help": {
+    "label": "换人字梯并系安全绳",
+    "cost": 2,
+    "cut": 25
+   },
+   "desc": "换灯泡踩着的椅子晃了一下。"
+  },
+  {
+   "id": "bath-slip",
+   "kind": "prevent",
+   "name": "浴室滑倒",
+   "sprite": "water",
+   "ages": [
+    18,
+    85
+   ],
+   "weight": 5,
+   "tags": [
+    "fall"
+   ],
+   "threat": 45,
+   "intent": [
+    {
+     "bar": "h",
+     "dmg": 3
+    }
+   ],
+   "help": {
+    "label": "铺防滑垫装扶手",
+    "cost": 1,
+    "cut": 25
+   },
+   "desc": "浴室的地砖上有一层滑滑的皂沫。"
+  },
+  {
+   "id": "elder-hip",
+   "kind": "prevent",
+   "name": "老人跌倒",
+   "sprite": "elder",
+   "ages": [
+    28,
+    85
+   ],
+   "weight": 6,
+   "tags": [
+    "fall",
+    "elder"
+   ],
+   "threat": 55,
+   "intent": [
+    {
+     "bar": "h",
+     "dmg": 3
+    },
+    {
+     "bar": "m",
+     "dmg": 2
+    }
+   ],
+   "help": {
+    "label": "给老人家里装扶手防滑垫",
+    "cost": 3,
+    "cut": 25
+   },
+   "desc": "电话里父亲说摔了一下，腰疼得直不起来。"
+  },
+  {
+   "id": "swim-risk",
+   "kind": "prevent",
+   "name": "野泳溺水",
+   "sprite": "water",
+   "ages": [
+    18,
+    60
+   ],
+   "weight": 5,
+   "tags": [
+    "drown"
+   ],
+   "threat": 75,
+   "intent": [
+    {
+     "bar": "h",
+     "dmg": 5
+    }
+   ],
+   "help": {
+    "label": "去有救生员的泳池",
+    "cost": 1,
+    "cut": 25
+   },
+   "desc": "水库的水面看着温柔，脚下的陡坡说变就变。"
+  },
+  {
+   "id": "shock-wire",
+   "kind": "prevent",
+   "name": "家电漏电",
+   "sprite": "bolt",
+   "ages": [
+    18,
+    85
+   ],
+   "weight": 5,
+   "tags": [
+    "first-aid",
+    "fire"
+   ],
+   "threat": 60,
+   "intent": [
+    {
+     "bar": "h",
+     "dmg": 4
+    }
+   ],
+   "help": {
+    "label": "请电工查线路换插座",
+    "cost": 2,
+    "cut": 25
+   },
+   "desc": "洗衣机一开机，外壳麻酥酥的。"
+  },
+  {
+   "id": "oil-burn",
+   "kind": "prevent",
+   "name": "热油烫伤",
+   "sprite": "flame",
+   "ages": [
+    18,
+    85
+   ],
+   "weight": 5,
+   "tags": [
+    "burn",
+    "first-aid"
+   ],
+   "threat": 45,
+   "intent": [
+    {
+     "bar": "h",
+     "dmg": 3
+    }
+   ],
+   "help": {
+    "label": "备一支烫伤膏",
+    "cost": 1,
+    "cut": 25
+   },
+   "desc": "油锅一溅，手背上燎起一片红。"
+  },
+  {
+   "id": "stroke-hit",
+   "kind": "prevent",
+   "name": "卒中突发",
+   "sprite": "brain",
+   "ages": [
+    38,
+    85
+   ],
+   "weight": 7,
+   "tags": [
+    "heart"
+   ],
+   "threat": 70,
+   "intent": [
+    {
+     "bar": "h",
+     "dmg": 4
+    }
+   ],
+   "help": {
+    "label": "存好卒中中心电话",
+    "cost": 2,
+    "cut": 25
+   },
+   "desc": "半边脸突然垮下来，杯子从手里掉了。"
+  },
+  {
+   "id": "heart-hit",
+   "kind": "prevent",
+   "name": "心梗突发",
+   "sprite": "heart",
+   "ages": [
+    38,
+    85
+   ],
+   "weight": 7,
+   "tags": [
+    "heart"
+   ],
+   "threat": 75,
+   "intent": [
+    {
+     "bar": "h",
+     "dmg": 5
+    }
+   ],
+   "help": {
+    "label": "做一次冠脉评估",
+    "cost": 4,
+    "cut": 25
+   },
+   "desc": "胸口像压了块石头，冷汗把背心浸透了。"
+  },
+  {
+   "id": "bp-crisis",
+   "kind": "prevent",
+   "name": "血压飙升",
+   "sprite": "heart",
+   "ages": [
+    30,
+    85
+   ],
+   "weight": 6,
+   "tags": [
+    "hypertension"
+   ],
+   "threat": 55,
+   "intent": [
+    {
+     "bar": "h",
+     "dmg": 4
+    }
+   ],
+   "help": {
+    "label": "规范测压调药",
+    "cost": 2,
+    "cut": 25
+   },
+   "desc": "后脖颈发紧，一量血压高得吓人。"
+  },
+  {
+   "id": "sugar-crash",
+   "kind": "prevent",
+   "name": "低血糖昏迷",
+   "sprite": "pill",
+   "ages": [
+    18,
+    85
+   ],
+   "weight": 5,
+   "tags": [
+    "diabetes"
+   ],
+   "threat": 55,
+   "intent": [
+    {
+     "bar": "h",
+     "dmg": 3
+    }
+   ],
+   "help": {
+    "label": "随身备糖和血糖仪",
+    "cost": 1,
+    "cut": 25
+   },
+   "desc": "眼前发黑，手抖得握不住东西。"
+  },
+  {
+   "id": "cancer-delay",
+   "kind": "prevent",
+   "name": "拖延就诊",
+   "sprite": "cross",
+   "ages": [
+    30,
+    85
+   ],
+   "weight": 6,
+   "tags": [
+    "cancer-screen"
+   ],
+   "threat": 60,
+   "intent": [
+    {
+     "bar": "h",
+     "dmg": 4
+    }
+   ],
+   "help": {
+    "label": "把体检预约排上日程",
+    "cost": 2,
+    "cut": 25
+   },
+   "desc": "体检报告上的那个结节，你已经拖了两年。"
+  },
+  {
+   "id": "vaccine-gap",
+   "kind": "prevent",
+   "name": "疫苗空窗",
+   "sprite": "cross",
+   "ages": [
+    18,
+    85
+   ],
+   "weight": 4,
+   "tags": [
+    "vaccine"
+   ],
+   "threat": 40,
+   "intent": [
+    {
+     "bar": "h",
+     "dmg": 2
+    }
+   ],
+   "help": {
+    "label": "把该补的疫苗补上",
+    "cost": 2,
+    "cut": 25
+   },
+   "desc": "流感季到了，你没打疫苗，办公室咳声一片。"
+  },
+  {
+   "id": "flu-heavy",
+   "kind": "prevent",
+   "name": "重症流感",
+   "sprite": "pill",
+   "ages": [
+    18,
+    85
+   ],
+   "weight": 5,
+   "tags": [
+    "vaccine",
+    "heart"
+   ],
+   "threat": 50,
+   "intent": [
+    {
+     "bar": "h",
+     "dmg": 3
+    },
+    {
+     "bar": "e",
+     "dmg": 2
+    }
+   ],
+   "help": {
+    "label": "发病 48 小时内就医",
+    "cost": 2,
+    "cut": 25
+   },
+   "desc": "高烧三天不退，胸口开始发闷。"
+  },
+  {
+   "id": "overwork",
+   "kind": "prevent",
+   "name": "长期过劳",
+   "sprite": "person",
+   "ages": [
+    20,
+    60
+   ],
+   "weight": 7,
+   "tags": [
+    "stress",
+    "sleep"
+   ],
+   "threat": 50,
+   "intent": [
+    {
+     "bar": "h",
+     "dmg": 2
+    },
+    {
+     "bar": "e",
+     "dmg": 3
+    }
+   ],
+   "help": {
+    "label": "砍掉一半加班",
+    "cost": 0,
+    "cut": 25
+   },
+   "desc": "连续一个月半夜两点睡，心脏偶尔咯噔一下。"
+  },
+  {
+   "id": "night-shift",
+   "kind": "prevent",
+   "name": "熬夜连轴",
+   "sprite": "moon",
+   "ages": [
+    18,
+    65
+   ],
+   "weight": 6,
+   "tags": [
+    "sleep"
+   ],
+   "threat": 45,
+   "intent": [
+    {
+     "bar": "h",
+     "dmg": 2
+    },
+    {
+     "bar": "e",
+     "dmg": 3
+    }
+   ],
+   "help": {
+    "label": "把觉还回来",
+    "cost": 0,
+    "cut": 25
+   },
+   "desc": "又一个通宵，天亮时心跳得发飘。"
+  },
+  {
+   "id": "burnout",
+   "kind": "prevent",
+   "name": "情绪触底",
+   "sprite": "rain",
+   "ages": [
+    18,
+    70
+   ],
+   "weight": 6,
+   "tags": [
+    "stress"
+   ],
+   "threat": 55,
+   "intent": [
+    {
+     "bar": "f",
+     "dmg": 2
+    },
+    {
+     "bar": "e",
+     "dmg": 2
+    }
+   ],
+   "help": {
+    "label": "约一次心理咨询",
+    "cost": 3,
+    "cut": 25
+   },
+   "desc": "什么都没发生，但什么都提不起劲。"
+  },
+  {
+   "id": "invest-crash",
+   "kind": "prevent",
+   "name": "投资爆雷",
+   "sprite": "chart",
+   "ages": [
+    22,
+    75
+   ],
+   "weight": 6,
+   "tags": [
+    "invest"
+   ],
+   "threat": 60,
+   "intent": [
+    {
+     "bar": "m",
+     "dmg": 4
+    }
+   ],
+   "help": {
+    "label": "请律师看还能追回多少",
+    "cost": 3,
+    "cut": 25
+   },
+   "chain": {
+    "unresolved": "debt-call"
+   },
+   "desc": "那个年化 15% 的平台，App 打不开了。"
+  },
+  {
+   "id": "scam-call",
+   "kind": "prevent",
+   "name": "诈骗电话",
+   "sprite": "phone",
+   "ages": [
+    18,
+    85
+   ],
+   "weight": 7,
+   "tags": [
+    "scam"
+   ],
+   "threat": 55,
+   "intent": [
+    {
+     "bar": "m",
+     "dmg": 4
+    },
+    {
+     "bar": "f",
+     "dmg": 2
+    }
+   ],
+   "help": {
+    "label": "打 96110 咨询反诈",
+    "cost": 0,
+    "cut": 25
+   },
+   "chain": {
+    "unresolved": "debt-call"
+   },
+   "desc": "「你的包裹检出违禁品，需要配合调查。」"
+  },
+  {
+   "id": "debt-spiral",
+   "kind": "prevent",
+   "name": "网贷缠身",
+   "sprite": "coin",
+   "ages": [
+    18,
+    65
+   ],
+   "weight": 5,
+   "tags": [
+    "debt"
+   ],
+   "threat": 65,
+   "intent": [
+    {
+     "bar": "m",
+     "dmg": 4
+    },
+    {
+     "bar": "f",
+     "dmg": 2
+    }
+   ],
+   "help": {
+    "label": "找正规机构做债务重组",
+    "cost": 2,
+    "cut": 25
+   },
+   "desc": "五个 App 拆东墙补西墙，账算不清了。"
+  },
+  {
+   "id": "debt-call",
+   "kind": "prevent",
+   "name": "催债电话",
+   "sprite": "phone",
+   "ages": [
+    18,
+    85
+   ],
+   "weight": 3,
+   "tags": [
+    "debt"
+   ],
+   "threat": 50,
+   "intent": [
+    {
+     "bar": "m",
+     "dmg": 3
+    },
+    {
+     "bar": "f",
+     "dmg": 2
+    }
+   ],
+   "help": {
+    "label": "和债主当面谈还款计划",
+    "cost": 1,
+    "cut": 25
+   },
+   "desc": "一天十几个电话，通讯录被轰炸。"
+  },
+  {
+   "id": "insure-gap",
+   "kind": "prevent",
+   "name": "医保断缴",
+   "sprite": "paper",
+   "ages": [
+    18,
+    85
+   ],
+   "weight": 5,
+   "tags": [
+    "insurance"
+   ],
+   "threat": 45,
+   "intent": [
+    {
+     "bar": "m",
+     "dmg": 3
+    },
+    {
+     "bar": "h",
+     "dmg": 2
+    }
+   ],
+   "help": {
+    "label": "把医保续上",
+    "cost": 3,
+    "cut": 25
+   },
+   "desc": "换工作空了两个月，生病才知道报销没了。"
+  },
+  {
+   "id": "impulse-buy",
+   "kind": "prevent",
+   "name": "冲动消费",
+   "sprite": "coin",
+   "ages": [
+    18,
+    75
+   ],
+   "weight": 5,
+   "tags": [
+    "consume"
+   ],
+   "threat": 40,
+   "intent": [
+    {
+     "bar": "m",
+     "dmg": 2
+    },
+    {
+     "bar": "f",
+     "dmg": 2
+    }
+   ],
+   "help": {
+    "label": "把购物车晾三天",
+    "cost": 0,
+    "cut": 25
+   },
+   "desc": "直播间倒数三二一，你又下了一单。"
+  },
+  {
+   "id": "wage-unpaid",
+   "kind": "prevent",
+   "name": "欠薪拖欠",
+   "sprite": "hand",
+   "ages": [
+    18,
+    65
+   ],
+   "weight": 6,
+   "tags": [
+    "wage"
+   ],
+   "threat": 50,
+   "intent": [
+    {
+     "bar": "m",
+     "dmg": 3
+    },
+    {
+     "bar": "f",
+     "dmg": 2
+    }
+   ],
+   "help": {
+    "label": "去劳动监察投诉",
+    "cost": 0,
+    "cut": 25
+   },
+   "chain": {
+    "unresolved": "wage-due"
+   },
+   "desc": "工资拖了两个月，老板总说下周发。"
+  },
+  {
+   "id": "contract-trap",
+   "kind": "prevent",
+   "name": "合同陷阱",
+   "sprite": "pen",
+   "ages": [
+    18,
+    75
+   ],
+   "weight": 5,
+   "tags": [
+    "contract"
+   ],
+   "threat": 50,
+   "intent": [
+    {
+     "bar": "m",
+     "dmg": 4
+    },
+    {
+     "bar": "f",
+     "dmg": 2
+    }
+   ],
+   "help": {
+    "label": "请法律援助看条款",
+    "cost": 1,
+    "cut": 25
+   },
+   "desc": "签字的时候没注意那条违约金。"
+  },
+  {
+   "id": "job-loss",
+   "kind": "prevent",
+   "name": "突然裁员",
+   "sprite": "brief",
+   "ages": [
+    22,
+    58
+   ],
+   "weight": 5,
+   "tags": [
+    "unemploy"
+   ],
+   "threat": 55,
+   "intent": [
+    {
+     "bar": "m",
+     "dmg": 2
+    },
+    {
+     "bar": "f",
+     "dmg": 2
+    }
+   ],
+   "help": {
+    "label": "核对赔偿方案",
+    "cost": 1,
+    "cut": 25
+   },
+   "chain": {
+    "unresolved": "unemploy-next"
+   },
+   "desc": "上午还在改方案，下午工卡就刷不开门了。"
+  },
+  {
+   "id": "hurt-work",
+   "kind": "prevent",
+   "name": "工伤受伤",
+   "sprite": "bandage",
+   "ages": [
+    18,
+    60
+   ],
+   "weight": 5,
+   "tags": [
+    "injury"
+   ],
+   "threat": 60,
+   "intent": [
+    {
+     "bar": "h",
+     "dmg": 4
+    },
+    {
+     "bar": "m",
+     "dmg": 2
+    }
+   ],
+   "help": {
+    "label": "申报工伤并留证据",
+    "cost": 1,
+    "cut": 25
+   },
+   "desc": "吊装的钢索脱了钩，你躲得慢了半步。"
+  },
+  {
+   "id": "startup-fight",
+   "kind": "prevent",
+   "name": "合伙纠纷",
+   "sprite": "hand",
+   "ages": [
+    22,
+    65
+   ],
+   "weight": 4,
+   "tags": [
+    "startup"
+   ],
+   "threat": 55,
+   "intent": [
+    {
+     "bar": "m",
+     "dmg": 4
+    },
+    {
+     "bar": "f",
+     "dmg": 2
+    }
+   ],
+   "help": {
+    "label": "请律师理股权和账目",
+    "cost": 3,
+    "cut": 25
+   },
+   "desc": "合伙人私下又开了一家同业公司。"
+  },
+  {
+   "id": "tech-risk",
+   "kind": "prevent",
+   "name": "平台责任纠纷",
+   "sprite": "code",
+   "ages": [
+    20,
+    60
+   ],
+   "weight": 4,
+   "tags": [
+    "tech-law"
+   ],
+   "threat": 50,
+   "intent": [
+    {
+     "bar": "m",
+     "dmg": 3
+    },
+    {
+     "bar": "f",
+     "dmg": 2
+    }
+   ],
+   "help": {
+    "label": "请懂行的律师评估",
+    "cost": 3,
+    "cut": 25
+   },
+   "desc": "你写的爬虫被抓了典型，函件到了公司。"
+  },
+  {
+   "id": "account-hack",
+   "kind": "prevent",
+   "name": "账号被盗",
+   "sprite": "phone",
+   "ages": [
+    18,
+    85
+   ],
+   "weight": 6,
+   "tags": [
+    "account"
+   ],
+   "threat": 50,
+   "intent": [
+    {
+     "bar": "m",
+     "dmg": 2
+    },
+    {
+     "bar": "f",
+     "dmg": 2
+    }
+   ],
+   "help": {
+    "label": "挂失并开启两步验证",
+    "cost": 0,
+    "cut": 25
+   },
+   "desc": "收不到验证码，登录记录里多了台陌生设备。"
+  },
+  {
+   "id": "privacy-leak",
+   "kind": "prevent",
+   "name": "隐私泄露",
+   "sprite": "eye",
+   "ages": [
+    18,
+    85
+   ],
+   "weight": 5,
+   "tags": [
+    "online",
+    "account"
+   ],
+   "threat": 50,
+   "intent": [
+    {
+     "bar": "f",
+     "dmg": 2
+    },
+    {
+     "bar": "m",
+     "dmg": 2
+    }
+   ],
+   "help": {
+    "label": "留证据并要求平台删除",
+    "cost": 1,
+    "cut": 25
+   },
+   "desc": "你的照片和电话被挂在了群里。"
+  },
+  {
+   "id": "neighbor-fight",
+   "kind": "prevent",
+   "name": "邻里冲突",
+   "sprite": "fist",
+   "ages": [
+    18,
+    85
+   ],
+   "weight": 5,
+   "tags": [
+    "conflict"
+   ],
+   "threat": 45,
+   "intent": [
+    {
+     "bar": "f",
+     "dmg": 3
+    },
+    {
+     "bar": "h",
+     "dmg": 2
+    }
+   ],
+   "help": {
+    "label": "请社区调解",
+    "cost": 0,
+    "cut": 25
+   },
+   "desc": "为楼道里的鞋架，话越说越难听。"
+  },
+  {
+   "id": "guarantor",
+   "kind": "prevent",
+   "name": "担保被诉",
+   "sprite": "pen",
+   "ages": [
+    25,
+    75
+   ],
+   "weight": 4,
+   "tags": [
+    "signing"
+   ],
+   "threat": 60,
+   "intent": [
+    {
+     "bar": "m",
+     "dmg": 4
+    },
+    {
+     "bar": "f",
+     "dmg": 2
+    }
+   ],
+   "help": {
+    "label": "应诉并申请法援",
+    "cost": 2,
+    "cut": 25
+   },
+   "desc": "法院传票到了：你三年前给人签的那笔担保。"
+  },
+  {
+   "id": "redline-risk",
+   "kind": "prevent",
+   "name": "帮信风险",
+   "sprite": "badge",
+   "ages": [
+    18,
+    60
+   ],
+   "weight": 4,
+   "tags": [
+    "redline"
+   ],
+   "threat": 65,
+   "intent": [
+    {
+     "bar": "f",
+     "dmg": 4
+    }
+   ],
+   "help": {
+    "label": "主动咨询并留存证据",
+    "cost": 1,
+    "cut": 25
+   },
+   "desc": "借出去的银行卡在异地刷了流水。"
+  },
+  {
+   "id": "rent-dispute",
+   "kind": "prevent",
+   "name": "租房纠纷",
+   "sprite": "key",
+   "ages": [
+    18,
+    70
+   ],
+   "weight": 5,
+   "tags": [
+    "rent"
+   ],
+   "threat": 45,
+   "intent": [
+    {
+     "bar": "m",
+     "dmg": 2
+    },
+    {
+     "bar": "f",
+     "dmg": 2
+    }
+   ],
+   "help": {
+    "label": "按合同条款交涉",
+    "cost": 1,
+    "cut": 25
+   },
+   "desc": "退租那天，房东指着墙上一个旧印子要扣两千。"
+  },
+  {
+   "id": "formaldehyde",
+   "kind": "prevent",
+   "name": "装修甲醛",
+   "sprite": "flask",
+   "ages": [
+    18,
+    75
+   ],
+   "weight": 4,
+   "tags": [
+    "buy-house"
+   ],
+   "threat": 45,
+   "intent": [
+    {
+     "bar": "h",
+     "dmg": 3
+    }
+   ],
+   "help": {
+    "label": "通风晾房并请机构检测",
+    "cost": 2,
+    "cut": 25
+   },
+   "desc": "新衣柜的味道半年了还没散。"
+  },
+  {
+   "id": "elder-lost",
+   "kind": "prevent",
+   "name": "老人走失",
+   "sprite": "elder",
+   "ages": [
+    30,
+    85
+   ],
+   "weight": 4,
+   "tags": [
+    "elder"
+   ],
+   "threat": 50,
+   "intent": [
+    {
+     "bar": "f",
+     "dmg": 2
+    },
+    {
+     "bar": "e",
+     "dmg": 2
+    }
+   ],
+   "help": {
+    "label": "备好定位手环和联系卡",
+    "cost": 2,
+    "cut": 25
+   },
+   "desc": "母亲出门买菜，到天黑也没回来。"
+  },
+  {
+   "id": "child-fever",
+   "kind": "prevent",
+   "name": "孩子高烧",
+   "sprite": "child",
+   "ages": [
+    22,
+    48
+   ],
+   "weight": 6,
+   "tags": [
+    "child"
+   ],
+   "threat": 55,
+   "intent": [
+    {
+     "bar": "h",
+     "dmg": 3
+    },
+    {
+     "bar": "e",
+     "dmg": 2
+    }
+   ],
+   "help": {
+    "label": "学会分级就医",
+    "cost": 2,
+    "cut": 25
+   },
+   "desc": "后半夜孩子烧到 39 度 8，小脸通红。"
+  },
+  {
+   "id": "extreme-heat",
+   "kind": "prevent",
+   "rare": true,
+   "name": "极端高温",
+   "sprite": "sun",
+   "ages": [
+    18,
+    85
+   ],
+   "weight": 3,
+   "tags": [
+    "outdoor"
+   ],
+   "threat": 65,
+   "intent": [
+    {
+     "bar": "h",
+     "dmg": 4
+    },
+    {
+     "bar": "e",
+     "dmg": 2
+    }
+   ],
+   "help": {
+    "label": "调整作息避开午间",
+    "cost": 0,
+    "cut": 25
+   },
+   "desc": "连续 40 度，柏油路面都软了。"
+  },
+  {
+   "id": "chance-screen",
+   "kind": "chance",
+   "name": "免费筛查窗口",
+   "sprite": "cross",
+   "ages": [
+    18,
+    85
+   ],
+   "weight": 5,
+   "tags": [
+    "cancer-screen"
+   ],
+   "desc": "镇卫生院的免费筛查车来了，排队的村民不少。"
+  },
+  {
+   "id": "chance-training",
+   "kind": "chance",
+   "name": "公益培训",
+   "sprite": "book",
+   "ages": [
+    18,
+    60
+   ],
+   "weight": 5,
+   "tags": [
+    "unemploy"
+   ],
+   "desc": "人社局在广场办公益技能培训，现场就能报名。"
+  },
+  {
+   "id": "chance-subsidy",
+   "kind": "chance",
+   "name": "补贴办理窗口",
+   "sprite": "paper",
+   "ages": [
+    18,
+    85
+   ],
+   "weight": 5,
+   "tags": [
+    "insurance"
+   ],
+   "desc": "社区通知：灵活就业社保补贴开始受理。"
+  }
+ ]
+}

@@ -1,0 +1,21 @@
+{
+  "comment": "人生事件 16 条：结婚、生子、跳槽、父母生病等节点，受剧本（script 亲和）和标志位（needFlags）控制。d 为一次性效果；flag 为持续 n 章的每章效果（per）。数值为游戏设定。",
+  "events": [
+    { "id": "wedding", "name": "办了婚礼", "ages": [24, 42], "w": 6, "text": "办了场不算铺张的婚礼，亲戚坐了八桌。", "d": { "m": -35, "f": 8 }, "flag": { "name": "married", "chapters": 99 } },
+    { "id": "childbirth", "name": "孩子出生", "ages": [23, 40], "w": 6, "text": "孩子出生了。奶粉、疫苗、不睡觉，都是新的日常。", "d": { "e": -6 }, "flag": { "name": "childRearing", "chapters": 4, "per": { "m": -10, "e": -1 } } },
+    { "id": "jobhop", "name": "跳槽成功", "ages": [22, 52], "w": 6, "text": "换了份工作，工资涨了一截，头一个月累得够呛。", "d": { "m": 15, "e": -4 } },
+    { "id": "layoff", "name": "被裁员", "ages": [24, 55], "w": 5, "text": "公司一批人被裁了，你在名单里。赔偿谈得不算难看。", "d": { "m": 8, "f": -3 }, "flag": { "name": "unemployNext", "chapters": 1 } },
+    { "id": "parentsSick", "name": "父母生病", "ages": [28, 62], "w": 6, "text": "父亲住院手术，你轮流陪床跑手续。", "d": { "m": -20, "e": -6 }, "flag": { "name": "elderCare", "chapters": 3, "per": { "m": -6 } }, "script": { "sick": 1500 } },
+    { "id": "promotion", "name": "升职加薪", "ages": [24, 55], "w": 4, "text": "升了一级，责任和工资一起涨。", "d": { "m": 25, "e": -5 } },
+    { "id": "injuryAccident", "name": "受了工伤", "ages": [20, 58], "w": 3, "text": "干活时伤了下背，休了一个月。", "d": { "h": -12 }, "script": { "blue": 2500 } },
+    { "id": "inheritance", "name": "继承了遗产", "ages": [38, 80], "w": 3, "text": "长辈走后留下一笔钱，说不上是什么滋味。", "d": { "m": 40 } },
+    { "id": "divorce", "name": "离了婚", "ages": [28, 62], "w": 3, "text": "长痛短痛都痛，手续办完那天反而睡了个好觉。", "d": { "m": -25, "f": 2 }, "flag": { "name": "married", "chapters": 99, "need": true } },
+    { "id": "kidSchool", "name": "孩子上学", "ages": [26, 48], "w": 4, "text": "孩子上学了，学区和课外班成了新话题。", "d": { "m": -20 }, "flag": { "name": "childRearing", "chapters": 99, "need": true } },
+    { "id": "houseBuy", "name": "买了房", "ages": [26, 55], "w": 4, "text": "掏空六个钱包付了首付，从此有了月供。", "d": { "m": -35, "f": -2 }, "flag": { "name": "mortgage", "chapters": 8, "per": { "m": -6 } } },
+    { "id": "moveHouse", "name": "搬了家", "ages": [20, 70], "w": 4, "text": "搬进新租的房子，押金中介费加起来不少。", "d": { "m": -12 } },
+    { "id": "diagnosed", "name": "查出慢病", "ages": [35, 83], "w": 4, "text": "体检报告上有了一个要长期管理的名字。", "d": { "h": -5 }, "flag": { "name": "chronic", "chapters": 99 } },
+    { "id": "retrain", "name": "下决心转行", "ages": [24, 50], "w": 3, "text": "报了个班，晚上和周末都搭了进去。", "d": { "m": -10, "e": -5 }, "flag": { "name": "retraining", "chapters": 2, "per": { "e": -2 } } },
+    { "id": "emptyNest", "name": "孩子离家", "ages": [48, 68], "w": 3, "text": "孩子去外地读书了，家里一下子安静。", "d": { "f": 6, "m": 3 }, "flag": { "name": "childRearing", "chapters": 99, "need": true } },
+    { "id": "elderPass", "name": "送走了老人", "ages": [40, 83], "w": 2, "text": "办完后事，你把老人留下的东西一样样收好。", "d": { "m": 20, "f": -5 }, "flag": { "name": "elderCare", "chapters": 99, "need": true } }
+  ]
+}

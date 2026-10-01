@@ -1,0 +1,23 @@
+{
+  "name": "cheap-life",
+  "version": "1.0.0",
+  "private": true,
+  "description": "《高性价比人生》像素小镇 RPG —— 改编自 eternity4719/HowToLiveBetter《高性价比人生指南》（CC BY 4.0）",
+  "type": "module",
+  "scripts": {
+    "extract": "python tools/extract.py",
+    "validate": "node tools/validate.mjs",
+    "build": "node tools/build.mjs",
+    "lint": "eslint src tools tests",
+    "test": "npm run lint && node --test tests/*.test.mjs",
+    "sim": "node tools/sim.js",
+    "e2e": "node tests/e2e/run.mjs",
+    "dev": "node tools/build.mjs --watch"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.18.0",
+    "esbuild": "^0.24.2",
+    "eslint": "^9.18.0",
+    "playwright": "^1.49.1"
+  }
+}
