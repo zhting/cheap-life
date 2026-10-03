@@ -55,6 +55,9 @@ export const HAIR_COLORS = ["#2b1c12", "#5a3825", "#8a5a2b", "#c9a15a", "#e8e3d5
 export const CLOTHES_COLORS = ["#b13e53", "#3b5dc9", "#38b764", "#ef7d57", "#566c86", "#8a5aa0", "#c95d42", "#257179"];
 export const SKIN_COLORS = ["#f0c8a0", "#d9a066", "#a8734b", "#7a4e32"];
 
+/** 六个时段的名字 */
+export const SEG_NAMES = ["清晨", "上午", "正午", "午后", "黄昏", "夜晚"];
+
 /** 六个时段的全屏叠色（multiply，rgba）与四季色板偏移 */
 export const SEGMENT_TINTS = [
   "rgba(255,214,170,0.18)", // 清晨

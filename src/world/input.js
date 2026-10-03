@@ -23,6 +23,10 @@ export function makeInput(canvas, _opts) {
 
   window.addEventListener("keydown", (e) => {
     if (!state.enabled) return;
+    // 焦点在输入框里时让浏览器自己处理（打字）；按钮上的空格/回车留给按钮本身
+    const tag = e.target && e.target.tagName;
+    if (tag === "INPUT" || tag === "SELECT" || tag === "TEXTAREA") return;
+    if ((tag === "BUTTON" || tag === "A") && (e.code === "Space" || e.code === "Enter")) return;
     const k = KEYMAP[e.code];
     if (k) {
       held[k] = true;

@@ -1,8 +1,7 @@
 /**
  * renderer.js —— 离屏预渲染、镜头、叠色、文字。
  * 地面层与物体层在小镇生成后一次性预渲染到离屏画布，每帧只做裁剪；
- * 再画角色、NPC、标记和前景层（树冠、屋顶），最后全屏叠色（multiply）
- * 与原生分辨率文字。视口格数由容器尺寸决定，缩放取整数设备像素。
+ * 再画角色、NPC、标记和前景层（树冠、屋顶），最后全屏叠色（multiply）。视口格数由容器尺寸决定，缩放取整数设备像素。
  */
 import { TILE, C, SEGMENT_TINTS, SEASONS } from "./palette.js";
 import { drawTile, makeCharacterSheet, partsFromSeed, makeBuildingSprite, makeEncounterIcon, makeDecorSprite } from "./sprites.js";
@@ -10,9 +9,6 @@ import { T } from "../town/gen.js";
 import { findPath } from "../town/path.js";
 import { spotFor, computeSpots } from "../town/spots.js";
 import { makeWalker, stepWalker, setPath } from "./walker.js";
-
-/** 六个时段的名字 */
-const SEG_NAMES = ["清晨", "上午", "正午", "午后", "黄昏", "夜晚"];
 
 export function makeRenderer(canvas, town, seed, content) {
   const { w, h } = town;
@@ -48,7 +44,9 @@ export function makeRenderer(canvas, town, seed, content) {
     for (let y = 0; y < h; y++) {
       for (let x = 0; x < w; x++) {
         const t = town.tiles[y * w + x];
-        drawTile(g, t === T.BLOCK ? 0 : t, x, y, (x * 7 + y * 13 + seed) % 4, t === 0 ? season.grass : null);
+        // 树、长椅等装饰底下（BLOCK）也画成当季草地，避免露出一块旧色方格
+        const kind = t === T.BLOCK ? T.GRASS : t;
+        drawTile(g, kind, x, y, (x * 7 + y * 13 + seed) % 4, kind === T.GRASS ? season.grass : null);
       }
     }
     // 水边描一圈沙
@@ -190,28 +188,32 @@ export function makeRenderer(canvas, town, seed, content) {
         g.fillText(ov.bubble, sx + TILE * s / 2, sy - 5 * s - bob * s);
       }
     }
-    // 玩家
+    // 玩家：脚下影子 + 头顶小三角，和游荡的路人区分开
     if (walker) {
-      g.drawImage(playerSheet, walker.frame * TILE, walker.dir * TILE, TILE, TILE, Math.round((walker.px - cx) * s), Math.round((walker.py - cy) * s - 2 * s), TILE * s, TILE * s);
+      const ppx = Math.round((walker.px - cx) * s);
+      const ppy = Math.round((walker.py - cy) * s - 2 * s);
+      g.fillStyle = "rgba(26,28,44,0.28)";
+      g.fillRect(ppx + 4 * s, ppy + 15 * s, 8 * s, 2 * s);
+      g.drawImage(playerSheet, walker.frame * TILE, walker.dir * TILE, TILE, TILE, ppx, ppy, TILE * s, TILE * s);
+      // 倒三角：墨色描边 + 沙金填充
+      const ay = ppy - 7 * s - bob * s;
+      g.fillStyle = C.ink;
+      g.fillRect(ppx + 3 * s, ay - s, 10 * s, s);
+      for (let r = 0; r < 5; r++) g.fillRect(ppx + (3 + r) * s, ay + r * s, (10 - 2 * r) * s, s);
+      g.fillStyle = C.sand;
+      for (let r = 0; r < 4; r++) g.fillRect(ppx + (4 + r) * s, ay + r * s, (8 - 2 * r) * s, s);
     }
     // 前景（树冠）
     g.drawImage(foreground, cx, cy, view.cols * TILE, view.rows * TILE, 0, 0, view.cols * TILE * s, view.rows * TILE * s);
     // 全屏叠色：时段 × 季节
     const season = SEASONS[state.season || 0];
     g.globalCompositeOperation = "multiply";
-    g.fillStyle = "white";
     g.fillStyle = season.tint;
     g.fillRect(0, 0, canvas.width, canvas.height);
     g.fillStyle = SEGMENT_TINTS[state.segment % 6];
     g.fillRect(0, 0, canvas.width, canvas.height);
     g.globalCompositeOperation = "source-over";
-    // 时段角标（原生分辨率文字）
-    g.font = `${Math.max(10, Math.floor(3 * s))}px sans-serif`;
-    g.textAlign = "left";
-    g.fillStyle = "rgba(0,0,0,0.5)";
-    g.fillRect(canvas.width - 11 * s, 4 * s, 10 * s, 6 * s);
-    g.fillStyle = "#fff";
-    g.fillText(SEG_NAMES[state.segment % 6] || "", canvas.width - 10.4 * s, 8.6 * s);
+    // 时段与季节显示在状态栏（DOM 文字更清晰，也跟随字号设置）
   }
 
   /* ---- 公共接口 ---- */

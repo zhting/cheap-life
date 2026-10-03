@@ -11,8 +11,8 @@ import { computeSpots, spotFor } from "../town/spots.js";
 import { makeRenderer } from "../world/renderer.js";
 import { makeInput } from "../world/input.js";
 import { renderHud } from "./hud.js";
-import { initDialog, showDialog, hideDialog, dialogVisible, showNotice } from "./dialog.js";
-import { initPanels, closePanel, panelOpen, showBuildingPanel, showBattlePanel, updateOffers, showTemptPanel, showTemptPeek, showTemptOutcome, showSettlePanel, showEndingPanel, showMenuPanel } from "./panels.js";
+import { initDialog, showDialog, hideDialog, dialogVisible, advanceDialog, showNotice } from "./dialog.js";
+import { initPanels, closePanel, closeTopPanel, panelOpen, showBuildingPanel, showBattlePanel, updateOffers, showTemptPanel, showTemptPeek, showTemptOutcome, showSettlePanel, showEndingPanel, showMenuPanel } from "./panels.js";
 import { loadSettings, saveSettings, applySettings, showSettingsPanel } from "./settings.js";
 import { setSound, sfx } from "./sfx.js";
 import { initA11y, A11Y } from "./a11y.js";
@@ -56,6 +56,9 @@ export function boot() {
   el.overlay = $("overlay");
   el.toast = $("toast");
   el.dpadWrap = $("dpad-wrap");
+  el.mapwrap = $("mapwrap");
+  el.prompt = $("prompt");
+  el.interactBtn = $("interact-btn");
 
   initA11y(document.body);
   initDialog(el.townScene);
@@ -81,17 +84,29 @@ export function boot() {
   }
 
   input = makeInput(el.canvas, {});
-  input.on("interact", () => tryInteract());
-  const menuBtn = $("menu-btn");
-  if (menuBtn) menuBtn.addEventListener("click", () => openMenu());
+  // 空格/回车/E：有对话先翻对话，否则交互
+  input.on("interact", () => {
+    if (scene === "town" && dialogVisible() && !panelOpen()) advanceDialog();
+    else tryInteract();
+  });
+  for (const id of ["menu-btn", "menu-fab"]) {
+    const btn = $(id);
+    if (btn) btn.addEventListener("click", () => openMenu());
+  }
   const interactBtn = $("interact-btn");
   if (interactBtn) interactBtn.addEventListener("click", () => tryInteract());
-  input.on("menu", () => openMenu());
+  // Esc/M：有可关的面板先关面板，否则开菜单
+  input.on("menu", () => {
+    if (closeTopPanel()) return;
+    openMenu();
+  });
   input.on("tap", (arg) => onTap(arg));
   input.bindDpad(el.dpadWrap);
 
   // 设置持久化
   window.addEventListener("beforeunload", () => saveSettings(settings));
+  window.addEventListener("resize", () => { if (renderer && scene === "town") renderer.resize(); });
+  window.setInterval(updatePrompt, 200);
 }
 
 function applyTheme() {
@@ -262,7 +277,6 @@ function startTown(s, o, savedLog) {
   renderer.setPlayer(town.homeDoor[0], town.homeDoor[1]);
   renderer.onArrive(() => { if (!renderer.pathEmpty()) return; if (!checkOverlays()) tryInteract(true); });
   renderer.resize();
-  window.addEventListener("resize", () => renderer.resize());
   renderer.start();
   refreshHud();
   refreshOverlays();
@@ -352,11 +366,15 @@ function autosave() {
 }
 
 function handleEvents(events, cmd) {
+  const isEnd = !!cmd && cmd[0] === "end";
+  floatText.n = 0;
   for (const e of events) {
     switch (e.t) {
       case "bar":
         sfx[e.bar === "money" && e.delta > 0 ? "coin" : "hit"]();
-        floatText(`${barName(e.bar)} ${e.delta > 0 ? "+" : ""}${e.delta}`);
+        // 章末结算面板会逐条列出，不再飘字
+        if (!isEnd) floatText(`${barName(e.bar)} ${e.delta > 0 ? "+" : ""}${e.delta}`, e.delta > 0);
+        if (!isEnd && e.bar === "health" && e.delta < 0) hitShake();
         break;
       case "ap":
         break;
@@ -369,7 +387,8 @@ function handleEvents(events, cmd) {
         break;
       case "life": {
         const ev = content.events.find((x) => x.id === e.id);
-        if (ev) showDialog(`【人生事件】${ev.name}。${ev.text}`, null);
+        // 章末的人生事件写进结算面板，不另弹对话
+        if (ev && !isEnd) showDialog(`【人生事件】${ev.name}。${ev.text}`, null);
         break;
       }
       case "town": {
@@ -419,7 +438,7 @@ function handleEvents(events, cmd) {
     tiredShown = true;
     showDialog("你倦怠了。下一章只有 3 个行动点。让精力缓一缓：接纳管精力的习惯，别把日程排满。", null);
   }
-  if (state.ap === 0 && !panelOpen() && !dialogVisible() && scene === "town") {
+  if (state.ap === 0 && !state.ended && !panelOpen() && !dialogVisible() && scene === "town") {
     showDialog("天黑了。现在只剩迎战、拒绝和放弃习惯这些不花点数的事。回「家」睡觉，本章结算。", null);
   }
 }
@@ -594,7 +613,9 @@ function openMenu() {
         applySettings(s);
         setSound(s.sound);
         applyTheme();
-      });
+        renderer.resize();
+      }, () => renderer.setPaused(false));
+      renderer.setPaused(true);
     },
     onClose: () => renderer.setPaused(false),
   });
@@ -615,6 +636,7 @@ function showSettle(events) {
       tiredShown = false;
       refreshOverlays();
       renderer.setPlayer(town.homeDoor[0], town.homeDoor[1]);
+      replayAnim(el.mapwrap, "fade-in");
       showDialog(`第${state.chapter}章 · ${state.age} 岁。${state.ap} 个行动点。`, null);
     },
   });
@@ -622,6 +644,7 @@ function showSettle(events) {
 
 async function showEnding(ended) {
   clearSave();
+  hideDialog();
   lastSaveCode = await encodeSave(makeSave(seed, opts, log));
   const v = currentView();
   // "书里 x.y 条本可以帮你"：按死因遭遇匹配，未采纳、收益大、成本低的前 5 条
@@ -658,12 +681,58 @@ function suggestFor(tags, v) {
 
 /* ---------------- 飘字 ---------------- */
 
-function floatText(text) {
-  const div = document.createElement("div");
-  div.className = "float-text";
-  div.textContent = text;
-  el.townScene.appendChild(div);
-  window.setTimeout(() => div.remove(), 1100);
+/** 同一批事件里的多条飘字错开时间和高度，避免叠在一起 */
+function floatText(text, good) {
+  const i = floatText.n || 0;
+  floatText.n = i + 1;
+  window.setTimeout(() => {
+    const div = document.createElement("div");
+    div.className = "float-text" + (good ? " good" : "");
+    div.style.top = `calc(40% + ${(i % 4) * 1.6}em)`;
+    div.textContent = text;
+    el.mapwrap.appendChild(div);
+    window.setTimeout(() => div.remove(), 1100);
+  }, i * 220);
+}
+
+/** 受击抖动（动效关闭或系统要求减少动效时由 CSS 屏蔽） */
+function hitShake() {
+  replayAnim(el.mapwrap, "shake");
+}
+
+function replayAnim(node, cls) {
+  if (!node) return;
+  node.classList.remove(cls);
+  void node.offsetWidth; // 重新触发动画
+  node.classList.add(cls);
+  window.setTimeout(() => node.classList.remove(cls), 700);
+}
+
+/* ---------------- 门口提示 ---------------- */
+
+/** 站在建筑门口时，在地图底部提示建筑名和操作；交互按钮的文字跟着变 */
+function updatePrompt() {
+  if (!el.prompt) return;
+  let text = "";
+  let btn = "交互";
+  if (scene === "town" && renderer && !panelOpen() && !dialogVisible()) {
+    const near = renderer.nearInteractable();
+    const [px, py] = renderer.playerTile();
+    if (near && near.b.frontX === px && near.b.frontY === py) {
+      const meta = data.buildings.find((x) => x.id === near.b.id);
+      const name = meta ? meta.name : near.b.id;
+      btn = near.b.id === "home" ? "睡觉" : "进入";
+      const how = document.documentElement.dataset.controls === "touch" ? `点「${btn}」`
+        : window.matchMedia("(pointer: coarse)").matches ? `点建筑${btn}` : `按 E ${btn}`;
+      if (near.b.id === "home") text = state.ended ? name : `${name} · ${how}，结束本章`;
+      else text = `${name} · ${how}`;
+    }
+  }
+  if (el.prompt.textContent !== text) {
+    el.prompt.textContent = text;
+    el.prompt.classList.toggle("hidden", !text);
+  }
+  if (el.interactBtn && el.interactBtn.textContent !== btn) el.interactBtn.textContent = btn;
 }
 
 /* ---------------- 调试钩子 ---------------- */

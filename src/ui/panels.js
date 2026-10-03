@@ -27,6 +27,18 @@ export function panelOpen() {
   return !!current;
 }
 
+/** Esc：关闭带返回键的面板（结算、结局这类必须点按钮的面板不响应） */
+export function closeTopPanel() {
+  if (!current || !current.el.querySelector("[data-back]")) return false;
+  closePanel();
+  return true;
+}
+
+/** 给 settings.js 等模块挂面板用，和本文件的面板共用同一个栈 */
+export function mountPanel(html, opts) {
+  return mount(html, opts);
+}
+
 function mount(html, opts = {}) {
   closePanel();
   const box = document.createElement("div");
@@ -42,8 +54,7 @@ function mount(html, opts = {}) {
     },
   };
   current = api;
-  const back = box.querySelector("[data-back]");
-  if (back) back.addEventListener("click", closePanel);
+  for (const back of box.querySelectorAll("[data-back]")) back.addEventListener("click", closePanel);
   A11Y.focusPanel(box);
   return api;
 }
@@ -444,19 +455,32 @@ export function showSettlePanel(opts) {
   const bars = events.filter((e) => e.t === "bar");
   const life = events.find((e) => e.t === "life");
   const town2 = events.find((e) => e.t === "town");
-  const rows = bars.map((e) => `<div class="settle-row">${barName(e.bar)} <b class="${e.delta >= 0 ? "good" : "bad"}">${e.delta > 0 ? "+" : ""}${e.delta}</b> ${e.reason}</div>`).join("");
+  const rows = bars.map((e) => `<div class="settle-row"><span class="settle-bar">${barName(e.bar)}</span><b class="settle-delta ${e.delta >= 0 ? "good" : "bad"}">${e.delta > 0 ? "+" : ""}${e.delta}</b><span class="settle-reason">${e.reason}</span></div>`).join("");
   const p = mount(`
     <div class="panel-head"><h2>五年过去</h2></div>
     <div class="panel-body">
-      ${life ? `<div class="settle-life">【人生事件】${(content.events.find((e) => e.id === life.id) || {}).name || life.id}</div>` : ""}
+      ${life ? lifeLine(life.id) : ""}
       ${town2 ? `<div class="settle-town">【小镇】${(content.townEvents.events.find((e) => e.id === town2.id) || {}).text || ""}</div>` : ""}
-      ${rows || '<div class="muted">这一章风平浪静。</div>'}
-      <div class="settle-now">现在：健康 ${Math.round(view.bars.health)} · 积蓄 ${Math.round(view.bars.money)}千 · 精力 ${Math.round(view.bars.energy)} · 自由 ${Math.round(view.bars.freedom)}</div>
+      <div class="settle-rows">${rows || '<div class="muted">这一章风平浪静。</div>'}</div>
+      <div class="settle-now">现在：${barsLine(view)}</div>
     </div>
-    <div class="panel-actions"><button class="btn primary" id="settle-next">进入第 ${cn2(view.chapter)}章（${view.age} 岁）</button></div>
+    <div class="panel-actions"><button class="btn primary" id="settle-next">进入第${cn2(view.chapter)}章（${view.age} 岁）</button></div>
   `, { label: "章末结算", cls: "fullscreen" });
   p.el.querySelector("#settle-next").addEventListener("click", onNext);
   return p;
+}
+
+/** 四项状态一行，每项不拆行 */
+function barsLine(view) {
+  const b = view.bars;
+  return [`健康 ${Math.round(b.health)}`, `积蓄 ${Math.round(b.money)}千`, `精力 ${Math.round(b.energy)}`, `自由 ${Math.round(b.freedom)}`]
+    .map((t) => `<span class="nowrap">${t}</span>`).join(" · ");
+}
+
+function lifeLine(id) {
+  const ev = content.events.find((e) => e.id === id);
+  if (!ev) return `<div class="settle-life">【人生事件】${id}</div>`;
+  return `<div class="settle-life"><b>【人生事件】${ev.name}</b>${ev.text ? `<div>${ev.text}</div>` : ""}</div>`;
 }
 
 /* ---------------- 结局页 ---------------- */
@@ -470,7 +494,7 @@ export function showEndingPanel(opts) {
     <div class="panel-body">
       <div class="ending-score">结算分数 <b>${ended.score}</b>（${ended.age} 岁 × 10${ended.kind === "alive" ? " + 状态项" : ""}）</div>
       ${ended.kind === "death" && ended.deathCause ? `<div class="ending-cause">死因：${ended.deathCause}</div>` : ""}
-      <div class="ending-bars">健康 ${Math.round(view.bars.health)} · 积蓄 ${Math.round(view.bars.money)}千 · 精力 ${Math.round(view.bars.energy)} · 自由 ${Math.round(view.bars.freedom)}</div>
+      <div class="ending-bars">${barsLine(view)}</div>
       ${top3.length ? `<div class="ending-habits">最有用的习惯：${top3.map((c) => `第 ${c.id} 条 ${c.title.slice(0, 16)}…`).join("、")}</div>` : ""}
       ${suggestions && suggestions.length ? `<div class="ending-tips"><b>书里这些条目本可以帮你：</b><ul>${suggestions.map((id) => {
         const c = data.cardsById[id];
