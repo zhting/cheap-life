@@ -23,10 +23,10 @@ export function makeInput(canvas, _opts) {
 
   window.addEventListener("keydown", (e) => {
     if (!state.enabled) return;
-    // 焦点在按钮/输入框等控件上时，按键交给浏览器：
-    // 回车/空格完成点击、数字与字母正常输入，全局快捷键不抢
-    const t = e.target;
-    if (t && t.closest && t.closest("button, input, select, textarea, a[href]")) return;
+    // 焦点在输入框里时让浏览器自己处理（打字）；按钮/链接上的空格与回车留给控件本身，Esc/数字键仍可触发面板快捷键
+    const tag = e.target && e.target.tagName;
+    if (tag === "INPUT" || tag === "SELECT" || tag === "TEXTAREA") return;
+    if ((tag === "BUTTON" || tag === "A") && (e.code === "Space" || e.code === "Enter")) return;
     const k = KEYMAP[e.code];
     if (k) {
       held[k] = true;

@@ -2,7 +2,7 @@
  * settings.js —— 设置面板：音效、字号、十字键、减少动效、逐字显示、主题、
  * 求助与热线、关于与署名。设置存 localStorage（不可用时仅本局生效）。
  */
-import { closePanel, panelOpen } from "./panels.js";
+import { mountPanel } from "./panels.js";
 
 const KEY = "hli-settings";
 const DEFAULTS = { sound: false, font: "m", dpad: "auto", motion: true, typewriter: true, theme: "auto" };
@@ -27,19 +27,15 @@ export function applySettings(s) {
   document.documentElement.dataset.dpad = s.dpad;
   document.documentElement.dataset.motion = s.motion ? "on" : "off";
   document.documentElement.dataset.typewriter = s.typewriter ? "on" : "off";
-  const wrap = document.getElementById("dpad-wrap");
-  if (wrap) {
-    const portrait = window.matchMedia("(pointer: coarse)").matches;
-    wrap.style.display = s.dpad === "on" || (s.dpad === "auto" && portrait) ? "" : "none";
-  }
+  // 触屏显示底部操作栏（十字键/交互/菜单）；键鼠或手动隐藏时改用地图角上的浮动按钮
+  const coarse = window.matchMedia("(pointer: coarse)").matches;
+  const touch = s.dpad === "on" || (s.dpad === "auto" && coarse);
+  document.documentElement.dataset.controls = touch ? "touch" : "keys";
 }
 
-export function showSettingsPanel(current, onChange) {
-  const p0 = current;
-  const s = { ...p0 };
-  const box = document.createElement("div");
-  box.className = "panel settings";
-  box.innerHTML = `
+export function showSettingsPanel(current, onChange, onClose) {
+  const s = { ...current };
+  const p = mountPanel(`
     <div class="panel-head"><button class="btn back" data-back aria-label="返回">←</button><h2>设置</h2></div>
     <div class="panel-body">
       <label class="set-row"><input type="checkbox" id="set-sound" ${s.sound ? "checked" : ""}> 音效（默认静音，开启后播放合成音）</label>
@@ -82,15 +78,17 @@ export function showSettingsPanel(current, onChange) {
       </div>
     </div>
     <div class="panel-actions"><button class="btn primary" data-back>完成</button></div>
-  `;
-  if (panelOpen()) closePanel();
-  document.getElementById("overlay").appendChild(box);
+  `, { label: "设置", cls: "settings" });
+  const box = p.el;
   box.querySelector("#set-sound").addEventListener("change", (e) => { s.sound = e.target.checked; onChange(s); });
   box.querySelector("#set-font").addEventListener("change", (e) => { s.font = e.target.value; onChange(s); });
   box.querySelector("#set-dpad").addEventListener("change", (e) => { s.dpad = e.target.value; onChange(s); });
   box.querySelector("#set-motion").addEventListener("change", (e) => { s.motion = e.target.checked; onChange(s); });
   box.querySelector("#set-tw").addEventListener("change", (e) => { s.typewriter = e.target.checked; onChange(s); });
   box.querySelector("#set-theme").addEventListener("change", (e) => { s.theme = e.target.value; onChange(s); });
-  box.querySelector("[data-back]").addEventListener("click", () => box.remove());
-  return box;
+  if (onClose) {
+    const oc = p.close;
+    p.close = () => { oc(); onClose(); };
+  }
+  return p;
 }
