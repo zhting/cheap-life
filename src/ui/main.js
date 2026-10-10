@@ -5,14 +5,15 @@
  * 内核返回一组事件，状态栏、世界层与面板按事件播放。
  */
 import { create, apply, legal, view, replay, fightPreview } from "../core/game.js";
+import { findTemplate } from "../core/fight.js";
 import { data, content } from "../core/data.js";
 import { generateTown } from "../town/gen.js";
 import { computeSpots, spotFor } from "../town/spots.js";
 import { makeRenderer } from "../world/renderer.js";
 import { makeInput } from "../world/input.js";
 import { renderHud } from "./hud.js";
-import { initDialog, showDialog, hideDialog, dialogVisible, showNotice } from "./dialog.js";
-import { initPanels, closePanel, panelOpen, showBuildingPanel, showBattlePanel, updateOffers, showTemptPanel, showTemptPeek, showTemptOutcome, showSettlePanel, showEndingPanel, showMenuPanel } from "./panels.js";
+import { initDialog, showDialog, hideDialog, dialogVisible, advanceDialog, showNotice } from "./dialog.js";
+import { initPanels, closePanel, panelOpen, panelDigit, showBuildingPanel, showBattlePanel, updateOffers, showTemptPanel, showTemptPeek, showTemptOutcome, showSettlePanel, showEndingPanel, showMenuPanel } from "./panels.js";
 import { loadSettings, saveSettings, applySettings, showSettingsPanel } from "./settings.js";
 import { setSound, sfx } from "./sfx.js";
 import { initA11y, A11Y } from "./a11y.js";
@@ -81,12 +82,32 @@ export function boot() {
   }
 
   input = makeInput(el.canvas, {});
-  input.on("interact", () => tryInteract());
+  // 键盘/十字键/点击的统一入口：对话框优先吃掉确认键，面板里交给焦点控件
+  input.on("interact", () => {
+    if (dialogVisible()) {
+      advanceDialog();
+      return;
+    }
+    tryInteract();
+  });
+  input.on("menu", () => {
+    if (dialogVisible()) {
+      hideDialog();
+      return;
+    }
+    if (panelOpen()) {
+      closePanel();
+      return;
+    }
+    openMenu();
+  });
+  input.on("key", (k) => {
+    if (typeof k === "number") panelDigit(k);
+  });
   const menuBtn = $("menu-btn");
   if (menuBtn) menuBtn.addEventListener("click", () => openMenu());
   const interactBtn = $("interact-btn");
   if (interactBtn) interactBtn.addEventListener("click", () => tryInteract());
-  input.on("menu", () => openMenu());
   input.on("tap", (arg) => onTap(arg));
   input.bindDpad(el.dpadWrap);
 
@@ -316,15 +337,15 @@ function refreshOverlays() {
     if (e.state !== 0 || e.seg > state.segment) continue;
     const pos = spotFor(spots, seed, "enc:" + e.tpl);
     if (!pos) continue;
-    const tpl = content.encounters.find((t) => t.id === e.tpl);
+    const tpl = findTemplate(state, e.tpl, data, content); // 含急救生成的救援遭遇
     if (!tpl) continue;
-    list.push({ x: pos[0], y: pos[1], icon: tpl.sprite, bubble: "!" });
+    list.push({ x: pos[0], y: pos[1], icon: tpl.sprite, bubble: "!", encId: e.tpl });
   }
   for (const s of state.strangers) {
     if (s.done || s.seg > state.segment) continue;
     const pos = spotFor(spots, seed, "str:" + s.tpl);
     if (!pos) continue;
-    list.push({ x: pos[0], y: pos[1], icon: "person", bubble: "?" });
+    list.push({ x: pos[0], y: pos[1], icon: "person", bubble: "?", strId: s.tpl });
   }
   renderer.setOverlays(list);
 }
@@ -521,17 +542,17 @@ function seedInt(s) {
 function checkOverlays() {
   const [px, py] = renderer.playerTile();
   const list = renderer.state.overlays || [];
-  // 走到标记/陌生人身边（相邻即可）触发
+  // 走到标记/陌生人身边（相邻即可）触发：打开的是这个标记对应的遭遇，不是列表第一个
   for (const ov of list) {
     if (Math.abs(ov.x - px) > 1 || Math.abs(ov.y - py) > 1) continue;
-    if (ov.bubble === "!") {
-      const enc = state.encounters.find((e) => e.state === 0 && e.seg <= state.segment);
+    if (ov.encId) {
+      const enc = state.encounters.find((e) => e.tpl === ov.encId && e.state === 0 && e.seg <= state.segment);
       if (enc) {
         openBattle(enc.tpl);
         return true;
       }
-    } else if (ov.bubble === "?") {
-      const str = state.strangers.find((s2) => !s2.done && s2.seg <= state.segment);
+    } else if (ov.strId) {
+      const str = state.strangers.find((s2) => s2.tpl === ov.strId && !s2.done && s2.seg <= state.segment);
       if (str) {
         openTempt(str.tpl);
         return true;
@@ -545,10 +566,15 @@ function checkOverlays() {
 
 function openBattle(encId) {
   renderer.setPaused(true);
+  const preview = fightPreview(state, encId, []);
+  if (!preview) {
+    renderer.setPaused(false);
+    return;
+  }
   showBattlePanel({
     encId,
+    preview,
     view: currentView(),
-    state,
     commit(actions) {
       closePanel();
       renderer.setPaused(false);

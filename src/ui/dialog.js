@@ -38,9 +38,14 @@ function advance() {
   }
 }
 
+/** 键盘推进（回车/空格/E 由 input.js 路由过来）：等价于点击 */
+export function advanceDialog() {
+  if (el && !el.classList.contains("hidden")) advance();
+}
+
 function render() {
   const text = queue[0];
-  el.innerHTML = `<div class="dialog-text">${text}</div><div class="dialog-hint">${queue.length > 1 ? "点击继续（" + queue.length + "）" : "点击关闭"}</div>`;
+  el.innerHTML = `<div class="dialog-text">${text}</div><div class="dialog-hint">${queue.length > 1 ? "点击 / 回车继续（" + queue.length + "）" : "点击 / 回车关闭"}</div>`;
   A11Y.say(text);
 }
 

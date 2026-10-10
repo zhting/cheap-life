@@ -4,7 +4,7 @@
     { "id": "wedding", "name": "办了婚礼", "ages": [24, 42], "w": 6, "text": "办了场不算铺张的婚礼，亲戚坐了八桌。", "d": { "m": -35, "f": 8 }, "flag": { "name": "married", "chapters": 99 } },
     { "id": "childbirth", "name": "孩子出生", "ages": [23, 40], "w": 6, "text": "孩子出生了。奶粉、疫苗、不睡觉，都是新的日常。", "d": { "e": -6 }, "flag": { "name": "childRearing", "chapters": 4, "per": { "m": -10, "e": -1 } } },
     { "id": "jobhop", "name": "跳槽成功", "ages": [22, 52], "w": 6, "text": "换了份工作，工资涨了一截，头一个月累得够呛。", "d": { "m": 15, "e": -4 } },
-    { "id": "layoff", "name": "被裁员", "ages": [24, 55], "w": 5, "text": "公司一批人被裁了，你在名单里。赔偿谈得不算难看。", "d": { "m": 8, "f": -3 }, "flag": { "name": "unemployNext", "chapters": 1 } },
+    { "id": "layoff", "name": "被裁员", "ages": [24, 55], "w": 5, "text": "公司一批人被裁了，你在名单里。赔偿谈得不算难看。", "d": { "m": 8, "f": -3 }, "flag": { "name": "unemploy-next", "chapters": 2 } },
     { "id": "parentsSick", "name": "父母生病", "ages": [28, 62], "w": 6, "text": "父亲住院手术，你轮流陪床跑手续。", "d": { "m": -20, "e": -6 }, "flag": { "name": "elderCare", "chapters": 3, "per": { "m": -6 } }, "script": { "sick": 1500 } },
     { "id": "promotion", "name": "升职加薪", "ages": [24, 55], "w": 4, "text": "升了一级，责任和工资一起涨。", "d": { "m": 25, "e": -5 } },
     { "id": "injuryAccident", "name": "受了工伤", "ages": [20, 58], "w": 3, "text": "干活时伤了下背，休了一个月。", "d": { "h": -12 }, "script": { "blue": 2500 } },

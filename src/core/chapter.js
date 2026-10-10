@@ -9,7 +9,7 @@ import {
   HEALTH_DECAY_STEPS, HEALTH_DECAY, ENERGY_RECOVER, NEGATIVE_MONEY_FREEDOM_HIT,
   DEBT_COLLAPSE, AP_PER_CHAPTER, TIRED_AP, CHAPTERS, YEARS_PER_CHAPTER,
   SCORE_AGE_MULT, SCORE_BARS_MULT, SCORE_MONEY_CAP, SCORE_MONEY_DIV,
-  CHAIN_WAGE_LOSS, DOMAIN_BAR,
+  CHAIN_WAGE_LOSS, CHAIN_CARDIO_CHAPTERS, DOMAIN_BAR,
 } from "./params.js";
 import { passiveBonus, matchedHabitCards, retention, dropOverflow } from "./habits.js";
 import { startChapter } from "./draw.js";
@@ -104,7 +104,7 @@ export function applyEnd(state, data, content) {
       damageBar(state, it.bar, dmg, tpl.name, events);
     }
     // 睡眠类未解决 → 心血管遭遇窗口
-    if (tpl.tags.indexOf("sleep") >= 0) state.flags.cardioUntil = state.chapter + 2;
+    if (tpl.tags.indexOf("sleep") >= 0) state.flags.cardioUntil = state.chapter + CHAIN_CARDIO_CHAPTERS;
     enc.state = 2;
     events.push({ t: "encState", id: enc.tpl, state: 2 });
     if (checkEnding(state)) return events.concat([{ t: "ending", ...state.ended }]);
@@ -122,14 +122,19 @@ export function applyEnd(state, data, content) {
   events.push({ t: "bar", bar: "money", delta: income, reason: "收入" });
   if (expense > 0) events.push({ t: "bar", bar: "money", delta: -expense, reason: "生活与医疗开支" });
 
-  // 3. 持续事件（婚姻、房贷、带娃……）
-  for (const name of Object.keys(state.flags)) {
+  // 3. 持续事件（婚姻、房贷、带娃……）：只倒计时内容里登记的持续标志。
+  //    链式标志（debt-call / unemploy-next / wage-due / cardioUntil / chancePity）
+  //    是窗口、时效或一次性标记，不在这里递减，由各自的读写处管理。
+  for (const ev of content.events) {
+    if (!ev.flag) continue;
+    const name = ev.flag.name;
+    if (name === "unemploy-next") continue; // 一次性标志，章初抽牌时消费
     const v = state.flags[name];
     if (typeof v !== "number" || v <= 0 || v >= 90) continue;
-    const ev = content.events.find((e) => e.flag && e.flag.name === name);
-    if (ev && ev.flag.per) applyBarDelta(state, ev.flag.per, events, ev.name);
+    if (ev.flag.per) applyBarDelta(state, ev.flag.per, events, ev.name);
     state.flags[name] = v - 1;
   }
+  state.flags.freeLearn = 0; // 免费学习名额当章有效
 
   // 4. 被动加成与自然衰减
   const bonus = passiveBonus(habitCards);
@@ -141,8 +146,10 @@ export function applyEnd(state, data, content) {
     }
   }
   const decay = Math.floor(healthDecayFor(age) / 10);
+  const hpBefore = state.bars.health;
   state.bars.health = Math.max(0, state.bars.health - decay);
   events.push({ t: "bar", bar: "health", delta: -decay, reason: "衰老" });
+  if (hpBefore > 0 && state.bars.health <= 0) state.lastEncName = ""; // 死于自然衰老时，死因不再挂到旧遭遇上
   state.bars.energy = Math.min(100, state.bars.energy + ENERGY_RECOVER);
   state.bars.freedom = Math.min(100, state.bars.freedom + 0);
   if (state.bars.money < 0) {

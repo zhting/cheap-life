@@ -5,11 +5,11 @@
 import { stream, int } from "./rng.js";
 import {
   FIGHT_ROUNDS, FINAL_BLOW_MULT, RETREAT_MULT, VARIANCE_MIN, VARIANCE_MAX, PAY_CUT,
-  QUIZ_ALL_WRONG_MULT, CHAIN_WAGE_EXPIRE, CHAIN_WAGE_LOSS, DOMAIN_BAR,
+  QUIZ_ALL_WRONG_MULT, CHAIN_WAGE_EXPIRE, CHAIN_WAGE_LOSS, CHAIN_CARDIO_CHAPTERS, DOMAIN_BAR,
 } from "./params.js";
 import { retention, matchedHabitCards, habitCut } from "./habits.js";
 import { suggestCards } from "./draw.js";
-import { quizScene, quizScore } from "./quiz.js";
+import { quizScene, quizScore, quizThreat } from "./quiz.js";
 
 /** 急救型遭遇模板：由题目生成，不进内容文件 */
 export function rescueTemplate(quiz, cardsById) {
@@ -51,8 +51,27 @@ function damageEvent(state, bar, amount, reason, events) {
   if (name !== "money") state.lastEncName = reason;
 }
 
-/** 执行一整场战斗。actions: [["habit",cardId]|["pay"]|["quiz",[answers]]|["retreat"], ...] */
+/** 执行一整场战斗。actions: [["habit",cardId]|["pay"]|["quiz",[answers]]|["retreat"], ...]
+ *  原子性：先在状态副本上完整重演，任何一回合非法就整体作废并返回 ok:false，
+ *  真实状态不被改动；合法才把结果提交回真实状态。 */
 export function resolveFight(state, encId, actions, data, content) {
+  const draft = {
+    ...state,
+    bars: { ...state.bars },
+    flags: { ...state.flags },
+    encounters: state.encounters.map((e) => ({ ...e })),
+  };
+  const result = runFight(draft, encId, actions, data, content);
+  if (!result.ok) return result;
+  state.bars = draft.bars;
+  state.flags = draft.flags;
+  state.encounters = draft.encounters;
+  state.fights = draft.fights;
+  state.lesson = draft.lesson;
+  return result;
+}
+
+function runFight(state, encId, actions, data, content) {
   const events = [];
   const slot = state.encounters.find((e) => e.tpl === encId && e.state === 0);
   const tpl = findTemplate(state, encId, data, content);
@@ -104,13 +123,9 @@ export function resolveFight(state, encId, actions, data, content) {
         if (!tpl.quiz) return { ok: false, reason: "这场遭遇没有急救题" };
         const score = quizScore(scene, action[1] || []);
         events.push({ t: "action", kind: "quiz", score, total: scene.steps.length, round });
-        if (score >= scene.steps.length) {
-          threat = 0;
-        } else if (score > 0) {
-          threat = Math.ceil(threat / 2);
-        } else {
-          allWrong = true;
-        }
+        const q = quizThreat(threat, score, scene.steps.length);
+        threat = q.threat;
+        allWrong = q.allWrong;
       } else if (kind === "retreat") {
         retreated = true;
         events.push({ t: "action", kind: "retreat", round });
@@ -161,7 +176,7 @@ export function resolveFight(state, encId, actions, data, content) {
     }
     // 睡眠类未解决 → 心血管遭遇窗口
     if (tpl.tags.indexOf("sleep") >= 0) {
-      state.flags.cardioUntil = state.chapter + 2;
+      state.flags.cardioUntil = state.chapter + CHAIN_CARDIO_CHAPTERS;
     }
     events.push({ t: "fightEnd", id: encId, win: false, unresolved: true });
   }

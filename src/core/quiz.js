@@ -93,6 +93,13 @@ export function quizScene(seed, ordinal, quizId, state, content) {
   };
 }
 
+/** 急救题判分后的威胁（内核与战斗面板共用一套公式） */
+export function quizThreat(threat, score, total) {
+  if (score >= total) return { threat: 0, allWrong: false };
+  if (score > 0) return { threat: Math.ceil(threat / 2), allWrong: false };
+  return { threat, allWrong: true };
+}
+
 /** 判分：每步答对得 1 分。answers 与 steps 对齐，存的是洗牌后选项下标 */
 export function quizScore(scene, answers) {
   let score = 0;

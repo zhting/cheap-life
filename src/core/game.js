@@ -5,7 +5,7 @@
  */
 import { baseState, makeView, willCap } from "./state.js";
 import { drawScript } from "./script.js";
-import { dropOverflow } from "./habits.js";
+import { dropOverflow, retention, habitCut, matchedHabitCards } from "./habits.js";
 import { drawOffers, startChapter, takeFromBag } from "./draw.js";
 import { resolveFight, findTemplate } from "./fight.js";
 import { quizScene } from "./quiz.js";
@@ -13,7 +13,10 @@ import { doPeek, doAccept, doRefuse, autoIdentified } from "./tempt.js";
 import { applyEnd, checkEnding, applyChapterContent } from "./chapter.js";
 import { hash32 } from "./hash.js";
 import { data, content } from "./data.js";
-import { CHAIN_WAGE_EXPIRE } from "./params.js";
+import {
+  CHAIN_WAGE_EXPIRE, PAY_CUT, FIGHT_ROUNDS,
+  VARIANCE_MIN, VARIANCE_MAX, RETREAT_MULT, FINAL_BLOW_MULT, QUIZ_ALL_WRONG_MULT,
+} from "./params.js";
 
 /** 开局：抽剧本，落第 1 章 */
 export function create(seed, opts) {
@@ -95,9 +98,9 @@ function cmdTalk(state, buildingId) {
     t: "talk", building: buildingId, offers: state.offers,
     npc: npcName(state, buildingId), line: lines[bagIdx[0]],
   });
-  // 走进人社大院，欠薪追索续期
+  // 走进人社大院，欠薪追索续期：期限取「现状」与「本章再宽限 2 章」的更晚者
   if (buildingId === "hr" && state.flags["wage-due"]) {
-    state.flags["wage-due"] = Math.min(state.flags["wage-due"], state.chapter + CHAIN_WAGE_EXPIRE);
+    state.flags["wage-due"] = Math.max(state.flags["wage-due"], state.chapter + CHAIN_WAGE_EXPIRE);
     events.push({ t: "flag", name: "wage-due", value: state.flags["wage-due"], text: "劳动监察受理了你的材料，追索续上了" });
   }
   return { ok: true, events };
@@ -127,7 +130,9 @@ function cmdLearn(state, cardId) {
     state.bars.money -= card.cost.money;
     events.push({ t: "bar", bar: "money", delta: -card.cost.money, reason: "采纳：" + card.title });
   }
-  if (!freeLearn && card.cost.time > 0) spendAp(state, events);
+  if (!freeLearn) {
+    for (let i = 0; i < card.cost.time; i++) spendAp(state, events); // 时间成本 2/3 = 扣 2/3 个行动点
+  }
   if (freeLearn) {
     state.flags.freeLearn = 0;
     events.push({ t: "flag", name: "freeLearn", value: 0, text: "公益培训的免费学习名额用掉了" });
@@ -221,26 +226,38 @@ export function apply(state, cmd) {
   return result;
 }
 
-/** 战斗预演（不落状态）：界面逐回合演出用，命令提交后内核按同一种子重演 */
+/** 战斗预演（不落状态、不消耗洗牌袋）：界面逐回合演出用的全部数值都从这里拿，
+ *  与 resolveFight 用同一套内核公式；命令提交后内核按同一种子重演，结果必然一致。 */
 export function fightPreview(state, encId, actions) {
   const tpl = findTemplate(state, encId, data, content);
   if (!tpl) return null;
   const habitCards = state.habits.map((id) => data.cardsById[id]);
-  const matched = [];
-  for (const c of habitCards) {
-    for (const t of c.tags) {
-      if (tpl.tags.indexOf(t) >= 0) {
-        matched.push(c);
-        break;
-      }
-    }
-  }
-  const scene = tpl.quiz ? quizScene(state.seed, state.fights, tpl.quiz, state, content) : null;
+  const matchedCards = matchedHabitCards(habitCards, tpl.tags);
+  const k = retention(matchedCards);
+  const warm = state.script && state.script.personality === "warm";
+  const payCost = tpl.help
+    ? (warm ? Math.max(0, Math.floor((tpl.help.cost * 7) / 10)) : tpl.help.cost)
+    : 0;
+  // 洗牌袋走副本：预演不得消费真实袋，否则破坏确定性
+  const peek = { ...state, bags: { ...state.bags } };
+  const scene = tpl.quiz ? quizScene(state.seed, state.fights, tpl.quiz, peek, content) : null;
+  const cuts = {};
+  for (const c of matchedCards) cuts[c.id] = habitCut(c, state.script);
   return {
     tpl,
     threat: tpl.threat,
     intent: tpl.intent,
-    matched: matched.map((c) => c.id),
+    k,
+    matched: matchedCards.map((c) => c.id),
+    cuts,
+    payCost,
+    payCut: PAY_CUT,
+    helpLabel: tpl.help ? tpl.help.label : "",
+    rounds: FIGHT_ROUNDS,
+    variance: { min: VARIANCE_MIN, max: VARIANCE_MAX },
+    retreatMult: RETREAT_MULT,
+    finalBlowMult: FINAL_BLOW_MULT,
+    quizAllWrongMult: QUIZ_ALL_WRONG_MULT,
     scene,
     actions: actions || [],
   };

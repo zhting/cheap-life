@@ -21,36 +21,31 @@ const robotArg = args.indexOf("--robot") >= 0 ? args[args.indexOf("--robot") + 1
 
 const BENEFIT_RANK = { 大: 3, 中: 2, 小: 1 };
 
-/** 机器人的战斗动作策略：习惯发动 → 求助一次 → 急救题/撤退；急救题按是否学过作答 */
+/** 机器人的战斗动作策略：急救题先答（全对当回合清零，免挨打）→ 习惯发动 →
+ *  求助一次 → 最后一回合没招就撤退；答题正确率随机器人类型与是否学过出处条目而定 */
 function fightActions(state, encId, robot) {
   if (robot === "随机") return [["retreat"]];
   const preview = fightPreview(state, encId, []);
   const acts = [];
   const matched = preview.matched.filter((id) => state.habits.indexOf(id) >= 0);
+  if (preview.scene) {
+    const smart = preview.scene.learned.length > 0 || robot === "照书选" || robot === "谨慎";
+    const answers = preview.scene.steps.map((step) => {
+      if (smart) return step.options.findIndex((o) => o.ok);
+      return Math.floor(seededRandom(state.seed + acts.length * 31 + step.q.length) * step.options.length);
+    });
+    acts.push(["quiz", answers]);
+  }
   let habitIdx = 0;
   let paid = false;
-  for (let round = 0; round < 3; round++) {
+  for (let round = acts.length; round < 3; round++) {
     if (habitIdx < matched.length) {
       acts.push(["habit", matched[habitIdx++]]);
       continue;
     }
-    if (!paid && preview.tpl.help && state.bars.money >= preview.tpl.help.cost) {
+    if (!paid && preview.tpl.help && state.bars.money >= preview.payCost) {
       acts.push(["pay"]);
       paid = true;
-      continue;
-    }
-    if (preview.scene) {
-      // 学过出处条目就答对；没学过按书作答的概率随机器人类型而定
-      const learned = preview.scene.learned.length > 0;
-      const smart = learned || robot === "照书选" || robot === "谨慎";
-      const answers = preview.scene.steps.map((step) => {
-        if (smart) {
-          const idx = step.options.findIndex((o) => o.ok);
-          return idx;
-        }
-        return Math.floor(seededRandom(state.seed + round * 31 + step.q.length) * step.options.length);
-      });
-      acts.push(["quiz", answers]);
       continue;
     }
     acts.push(["retreat"]);

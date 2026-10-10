@@ -4,7 +4,8 @@
  * 累计权重加一次随机数抽取；全程整数与精确 double，不用对数、幂与三角函数。
  */
 import { stream, int, permille, weightedIndex, shuffle } from "./rng.js";
-import { stageOf, CHAPTER_STAGE_W, ENCOUNTERS_PER_CHAPTER, ENCOUNTERS_PER_CHAPTER_OLD, ENCOUNTERS_OLD_AGE, RARE_CHANCE, CHANCE_CHANCE, CHANCE_PITY_MULT, SAME_ENCOUNTER_MAX, LETHAL_GUARD_CHAPTERS, LETHAL_GUARD_RATIO, CHAIN_CARDIO_MULT, TOWN_EVENT_CHANCE, SEGMENTS } from "./params.js";
+import { stageOf, CHAPTER_STAGE_W, ENCOUNTERS_PER_CHAPTER, ENCOUNTERS_PER_CHAPTER_OLD, ENCOUNTERS_OLD_AGE, RARE_CHANCE, CHANCE_CHANCE, CHANCE_PITY_MULT, SAME_ENCOUNTER_MAX, LETHAL_GUARD_CHAPTERS, LETHAL_GUARD_RATIO, CHAIN_CARDIO_MULT, CHAIN_CHRONIC_FLAG, TOWN_EVENT_CHANCE, SEGMENTS } from "./params.js";
+import { rescueTemplate } from "./fight.js"; // 与 fight.js 互引：两者都只在函数体内使用对方导出
 
 /** 剧本修正 → 相关标签（遭遇权重按标签匹配剧本） */
 const SCRIPT_TAG_MODS = {
@@ -63,8 +64,12 @@ export function startChapter(state, data, content) {
 
   // —— 遭遇牌库 ——
   const next = stream(state.seed, "encdeck", chapter);
-  const normal = content.encounters.filter(
-    (t) => t.kind === "prevent" && !t.rare && inAges(t, age) && (state.encCounts[t.id] || 0) < SAME_ENCOUNTER_MAX
+  // 牌库 = 普通遭遇 + 由急救题生成的救援遭遇（kind "rescue"）
+  const deck = content.encounters.concat(
+    content.quizzes.map((q) => rescueTemplate(q, data.cardsById))
+  );
+  const normal = deck.filter(
+    (t) => (t.kind === "prevent" || t.kind === "rescue") && !t.rare && inAges(t, age) && (state.encCounts[t.id] || 0) < SAME_ENCOUNTER_MAX
   );
   const lethalCut = chapter <= LETHAL_GUARD_CHAPTERS
     ? Math.floor((state.bars.health * LETHAL_GUARD_RATIO) / 10000)
@@ -96,7 +101,7 @@ export function startChapter(state, data, content) {
     picked.push(avail.splice(idx, 1)[0]);
   }
   // 稀有事件：8% 概率替换一个普通遭遇
-  if (permille(next, RARE_CHANCE / 10)) {
+  if (permille(next, RARE_CHANCE)) {
     const rares = content.encounters.filter((t) => t.kind === "prevent" && t.rare && inAges(t, age));
     if (rares.length > 0) {
       const r = rares[int(next, 0, rares.length)];
@@ -104,26 +109,31 @@ export function startChapter(state, data, content) {
       else picked.push(r);
     }
   }
-  // 机遇事件：12%，连续两章没出现则 ×3
-  const chancePity = state.flags.chancePity ? CHANCE_PITY_MULT : 1;
-  const chanceBase = Math.floor((CHANCE_CHANCE * chancePity) / 1000);
+  // 机遇事件：12%（千分比），连续两章没出现则 ×3
+  const chanceBase = CHANCE_CHANCE * ((state.flags.chancePity || 0) >= 2 ? CHANCE_PITY_MULT : 1);
+  let chanceSpawned = false;
   if (permille(next, chanceBase)) {
     const chances = content.encounters.filter((t) => t.kind === "chance" && inAges(t, age));
     if (chances.length > 0) {
       const c = chances[int(next, 0, chances.length)];
       const chanceList = picked.filter((t) => t.kind === "chance");
-      if (chanceList.length === 0) picked.push(c);
+      if (chanceList.length === 0) {
+        picked.push(c);
+        chanceSpawned = true;
+      }
     }
-    state.flags.chancePity = 0;
-  } else {
-    state.flags.chancePity = (state.flags.chancePity || 0) + 1;
   }
+  // 保底计数：出现即清零；没出现（含当章没有符合年龄的机遇）连续两章后触发 ×3
+  state.flags.chancePity = chanceSpawned ? 0 : (state.flags.chancePity || 0) + 1;
 
   state.encounters = picked.map((t) => ({
     tpl: t.id,
     seg: int(next, 0, SEGMENTS),
     state: 0,
   }));
+  // 一次性链式标志在生成本章时消费：debt-call 强制催债、unemploy-next 加权招聘季
+  state.flags["debt-call"] = 0;
+  state.flags["unemploy-next"] = 0;
   for (const e of state.encounters) {
     events.push({ t: "spawn", kind: "encounter", id: e.tpl, seg: e.seg });
   }
@@ -167,7 +177,7 @@ export function startChapter(state, data, content) {
 
   // —— 小镇事件 ——
   state.townEvent = null;
-  if (permille(next, TOWN_EVENT_CHANCE / 10)) {
+  if (permille(next, TOWN_EVENT_CHANCE)) {
     const bag2 = takeFromBag(state, "town", 1, content.townEvents.events.length, next);
     const te = content.townEvents.events[bag2[0]];
     state.townEvent = te.id;
@@ -222,6 +232,8 @@ export function drawOffers(state, buildingId, data, content) {
       }
     }
     if (lesson.indexOf(c.id) >= 0) w = Math.floor((w * 2000) / 1000);
+    // 查出慢病后，医院 NPC 优先发放第 16 章（慢性病管理）的条目
+    if (state.flags[CHAIN_CHRONIC_FLAG] && c.chapter === 16) w = Math.floor((w * 2000) / 1000);
     return Math.max(w, 1);
   });
   const picked = [];

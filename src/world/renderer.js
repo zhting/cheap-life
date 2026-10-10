@@ -78,6 +78,9 @@ export function makeRenderer(canvas, town, seed, content) {
     for (const e of content.encounters) {
       if (!encounterIcons.has(e.sprite)) encounterIcons.set(e.sprite, makeEncounterIcon(e.sprite));
     }
+    for (const q of content.quizzes) {
+      if (q.sprite && !encounterIcons.has(q.sprite)) encounterIcons.set(q.sprite, makeEncounterIcon(q.sprite));
+    }
     // 游荡 NPC（纯装饰）：种子固定位置与相位
     const spots = computeSpots(town);
     wanderers = [];

@@ -5,9 +5,8 @@
  */
 import { A11Y } from "./a11y.js";
 import { makePortrait, makeEncounterIcon, partsFromSeed } from "../world/sprites.js";
-import { GRADE_EVIDENCE } from "../core/params.js";
 import { data, content } from "../core/data.js";
-import { fightPreview } from "../core/game.js";
+import { quizScore, quizThreat } from "../core/quiz.js";
 
 let overlayEl = null;
 let current = null; // { close() }
@@ -37,6 +36,7 @@ function mount(html, opts = {}) {
   overlayEl.appendChild(box);
   const api = {
     el: box,
+    onDigit: null, // 面板可注册数字键处理（如急救题 1-4 选题）
     close() {
       box.remove();
     },
@@ -167,20 +167,25 @@ export function showHabitsPanel(opts) {
 
 /* ---------------- 战斗面板（含急救题） ---------------- */
 
+/** 面板打开时按数字键（1-4 等）：转发给当前面板的 onDigit */
+export function panelDigit(n) {
+  if (current && current.onDigit) current.onDigit(n);
+}
+
 /**
- * 战斗逐回合演出：每选一个行动，界面按内核同款公式预演本回合；
- * 战斗结束（胜利/撤退/第 3 回合结束）后把全部动作作为一条 fight 命令提交，
- * 内核用同样的种子重演，结果必然一致。
+ * 战斗逐回合演出：每选一个行动，按内核 fightPreview 给出的同一套数值预演本回合；
+ * 战斗结束（胜利/撤退/最后一回合）后把全部动作作为一条 fight 命令提交，
+ * 内核用同样的种子重演，结果必然一致。面板不自算任何公式。
  */
 export function showBattlePanel(opts) {
-  const { encId, state, commit, onClose } = opts;
-  const tpl = content.encounters.find((e) => e.id === encId) || rescueTpl(encId);
+  const { preview, view, commit, onClose } = opts;
+  const tpl = preview.tpl;
   if (!tpl) return null;
   const icon = makeEncounterIcon(tpl.sprite);
   const actions = [];
   let round = 1;
-  let threat = tpl.threat;
-  let scene = tpl.quiz ? fightPreview(state, encId, []).scene : null;
+  let threat = preview.threat;
+  const scene = preview.scene;
   let quizAnswered = null;
   let finished = false;
 
@@ -191,7 +196,7 @@ export function showBattlePanel(opts) {
       <div class="battle-top">
         <img class="enc-icon" src="${icon.toDataURL()}" alt="">
         <div class="battle-info">
-          <div class="threat-line">威胁 <b id="threat-num">${tpl.threat}</b>/100</div>
+          <div class="threat-line">威胁 <b id="threat-num">${preview.threat}</b>/100</div>
           <div class="intent-line" id="intent-line"></div>
           <div class="enc-desc">${tpl.desc || ""}</div>
         </div>
@@ -208,11 +213,6 @@ export function showBattlePanel(opts) {
     el.scrollTop = el.scrollHeight;
   };
 
-  function matchedHabits() {
-    const prev = fightPreview(state, encId, actions);
-    return prev.matched.filter((id) => state.habits.indexOf(id) >= 0);
-  }
-
   function renderActions() {
     const area = p.el.querySelector("#battle-actions");
     if (finished) {
@@ -220,34 +220,37 @@ export function showBattlePanel(opts) {
       area.querySelector("#battle-done").addEventListener("click", () => commit(actions));
       return;
     }
-    const matched = matchedHabits();
-    const unused = matched.filter((id) => !actions.some((a) => a[0] === "habit" && a[1] === id));
+    const unused = preview.matched.filter((id) => !actions.some((a) => a[0] === "habit" && a[1] === id));
     const html = [];
     for (const id of unused.slice(0, 4)) {
       const card = data.cardsById[id];
       html.push(`<button class="btn habit-act" data-act="habit" data-id="${id}">习惯：${card.title.slice(0, 14)}…</button>`);
     }
-    const cost = tpl.help ? tpl.help.cost : 2;
-    html.push(`<button class="btn" data-act="pay" ${state.bars.money >= cost ? "" : "disabled"}>花钱求助（${cost}千，威胁-25）</button>`);
-    if (tpl.quiz) {
+    const cost = preview.payCost;
+    html.push(`<button class="btn" data-act="pay" ${view.bars.money >= cost ? "" : "disabled"}>花钱求助（${cost}千，威胁-${preview.payCut}）</button>`);
+    if (scene) {
       html.push('<button class="btn primary" data-act="quiz">急救选择题</button>');
     }
-    html.push('<button class="btn danger" data-act="retreat">撤退（本回合伤害×0.6，留下未解决）</button>');
+    html.push(`<button class="btn danger" data-act="retreat">撤退（本回合伤害×${preview.retreatMult / 10000}，留下未解决）</button>`);
     area.innerHTML = html.join("");
     for (const btn of area.querySelectorAll("[data-act]")) {
       btn.addEventListener("click", () => doAction(btn.getAttribute("data-act"), btn.getAttribute("data-id")));
     }
   }
 
-  function renderIntent(k) {
+  function renderIntent() {
     const line = p.el.querySelector("#intent-line");
-    const parts = tpl.intent.map((it) => `${barName(it.bar)} 预计 ${Math.max(1, Math.floor(it.dmg * (k || 10000) / 10000))}`).join("，");
+    const parts = preview.intent.map((it) => `${barName(it.bar)} 预计 ${Math.max(1, Math.floor(it.dmg * preview.k / 10000))}`).join("，");
     line.textContent = `意图：${parts}（已按你的习惯减伤）`;
   }
 
   function renderQuiz() {
     const area = p.el.querySelector("#quiz-area");
-    if (!scene || quizAnswered !== null) { area.innerHTML = ""; return; }
+    if (!scene || quizAnswered !== null) {
+      area.innerHTML = "";
+      p.onDigit = null;
+      return;
+    }
     area.innerHTML = scene.steps.map((step, si) => `
       <div class="quiz-step" data-step="${si}">
         <div class="quiz-q">${si + 1}. ${step.q}</div>
@@ -256,7 +259,7 @@ export function showBattlePanel(opts) {
             `<button class="btn quiz-opt ${scene.learned.length > 0 && step.excluded === oi ? "excluded" : ""}" data-si="${si}" data-oi="${oi}" ${step.excluded === oi ? "disabled" : ""}>${oi + 1}. ${o.t}${scene.learned.length > 0 && step.excluded === oi ? "（已排除）" : ""}</button>`).join("")}
         </div>
         <div class="quiz-why hidden" id="why-${si}"></div>
-      </div>`).join("") + '<button class="btn primary" id="quiz-submit" disabled>提交答案</button>';
+      </div>`).join("") + '<button class="btn primary" id="quiz-submit" disabled>提交答案（回车）</button>';
     const answers = new Array(scene.steps.length).fill(null);
     for (const btn of area.querySelectorAll(".quiz-opt")) {
       btn.addEventListener("click", () => {
@@ -265,7 +268,9 @@ export function showBattlePanel(opts) {
         answers[si] = oi;
         for (const b2 of area.querySelectorAll(`[data-si="${si}"]`)) b2.classList.remove("picked");
         btn.classList.add("picked");
-        area.querySelector("#quiz-submit").disabled = answers.some((a) => a === null);
+        const submit = area.querySelector("#quiz-submit");
+        submit.disabled = answers.some((a) => a === null);
+        if (!submit.disabled) submit.focus();
       });
     }
     area.querySelector("#quiz-submit").addEventListener("click", () => {
@@ -281,6 +286,13 @@ export function showBattlePanel(opts) {
       for (const b2 of area.querySelectorAll(".quiz-opt")) b2.disabled = true;
       advanceRound();
     });
+    // 数字键 1-4 选题：落在第一个还没作答的步骤上
+    p.onDigit = (n) => {
+      const si = answers.findIndex((a) => a === null);
+      if (si < 0) return;
+      const btn = area.querySelector(`.quiz-opt[data-si="${si}"][data-oi="${n - 1}"]`);
+      if (btn && !btn.disabled) btn.click();
+    };
   }
 
   function doAction(kind, id) {
@@ -292,7 +304,7 @@ export function showBattlePanel(opts) {
       advanceRound();
     } else if (kind === "pay") {
       actions.push(["pay"]);
-      log(`你花钱求助（${tpl.help.label}）`);
+      log(`你花钱求助（${preview.helpLabel}）`);
       advanceRound();
     } else if (kind === "quiz") {
       renderQuiz();
@@ -310,8 +322,8 @@ export function showBattlePanel(opts) {
     const result = simulateRound();
     if (result.events && result.events.length) {
       for (const e of result.events) {
-        if (e.t === "bar") log(`${barName(e.bar)} ${e.delta > 0 ? "+" : ""}${e.delta}（${e.reason}）`);
-        else if (e.t === "round") { threat = e.threat; renderIntent(e.k); p.el.querySelector("#threat-num").textContent = e.threat; }
+        if (e.t === "bar") log(`${barName(e.bar)} 预计 ${e.delta}（${e.reason}）`);
+        else if (e.t === "round") { threat = e.threat; renderIntent(); p.el.querySelector("#threat-num").textContent = e.threat; }
         else if (e.t === "action" && e.kind === "habit") log(`威胁 -${e.cut}`);
       }
     }
@@ -326,52 +338,51 @@ export function showBattlePanel(opts) {
     renderQuiz();
   }
 
-  /** 本地逐回合演算（与内核 resolveFight 同款公式；最终以提交 fight 命令后的内核事件为准） */
+  /** 本地逐回合演出：数值全部来自 fightPreview（内核同款公式与常数），
+   *  敌方伤害按波动区间给预估；真实数值以提交 fight 命令后的内核事件为准。 */
   function simulateRound() {
     const lastAct = actions[actions.length - 1];
     const events = [];
+    let allWrong = false;
+    let retreated = false;
     if (lastAct[0] === "quiz") {
-      const score = scene.steps.filter((step, si) => {
-        const a = lastAct[1][si];
-        return a !== null && step.options[a] && step.options[a].ok;
-      }).length;
-      if (score >= scene.steps.length) {
-        threat = 0;
-        log("全部答对！威胁压下去了。");
-      } else if (score > 0) {
-        threat = Math.ceil(threat / 2);
-        log(`答对 ${score}/${scene.steps.length}，威胁减半。`);
-      } else {
-        log("全部答错……伤害会加重。");
-      }
+      const score = quizScore(scene, lastAct[1]);
+      const q = quizThreat(threat, score, scene.steps.length);
+      threat = q.threat;
+      allWrong = q.allWrong;
+      if (q.threat === 0) log("全部答对！威胁压下去了。");
+      else if (!q.allWrong) log(`答对 ${score}/${scene.steps.length}，威胁减半。`);
+      else log("全部答错……伤害会加重。");
     } else if (lastAct[0] === "habit") {
-      const card = data.cardsById[lastAct[1]];
-      const ben = { 大: 10000, 中: 6500, 小: 3500 }[card.benefit.level];
-      const ev = GRADE_EVIDENCE[card.grade];
-      const comp = state.script && state.script.cards.personality.mods.habitCut ? state.script.cards.personality.mods.habitCut : 10000;
-      const cut = Math.max(1, Math.floor((40 * ben * ev * comp) / 1000000000000));
+      const cut = preview.cuts[lastAct[1]];
       threat = Math.max(0, threat - cut);
       events.push({ t: "action", kind: "habit", cut });
     } else if (lastAct[0] === "pay") {
-      threat = Math.max(0, threat - 25);
+      threat = Math.max(0, threat - preview.payCut);
     } else if (lastAct[0] === "retreat") {
+      retreated = true;
       return { finished: true, win: false, unresolved: true, events };
     }
     p.el.querySelector("#threat-num").textContent = threat;
-    events.push({ t: "round", round, threat, k: 10000 });
+    events.push({ t: "round", round, threat, k: preview.k });
     if (threat <= 0) return { finished: true, win: true, events };
-    // 敌人出手（显示预估；真实数值由内核按种子重演）
-    const prev = fightPreview(state, encId, actions);
-    const kCoef = prev && prev.matched && prev.matched.length ? 0.65 : 1;
-    for (const it of tpl.intent) {
-      const dmg = Math.max(1, Math.floor(it.dmg * kCoef * (0.85 + 0.3 * ((round * 37 + it.dmg) % 10) / 20)));
-      events.push({ t: "bar", bar: it.bar, delta: -dmg, reason: tpl.name });
+    // 敌人出手预估：预告 × 保留系数 × 波动区间（±15%）× 行动修正，与内核一致
+    let mult = 10000;
+    if (allWrong) mult = Math.floor((mult * preview.quizAllWrongMult) / 10000);
+    if (retreated) mult = Math.floor((mult * preview.retreatMult) / 10000);
+    const isFinal = round >= preview.rounds;
+    if (isFinal) mult = Math.floor((mult * preview.finalBlowMult) / 10000);
+    for (const it of preview.intent) {
+      const base = it.dmg * preview.k * mult;
+      const lo = Math.max(1, Math.floor((base * preview.variance.min) / 1000000000000));
+      const hi = Math.max(1, Math.floor((base * preview.variance.max) / 1000000000000));
+      events.push({ t: "bar", bar: it.bar, delta: lo === hi ? -lo : `-${lo}~-${hi}`, reason: tpl.name });
     }
-    if (round >= 3) return { finished: true, win: false, unresolved: true, events };
+    if (isFinal) return { finished: true, win: false, unresolved: true, events };
     return { finished: false, events };
   }
 
-  renderIntent(10000);
+  renderIntent();
   renderActions();
   const oc = p.close;
   p.close = () => {
@@ -380,17 +391,6 @@ export function showBattlePanel(opts) {
     if (onClose) onClose();
   };
   return p;
-}
-
-function rescueTpl(encId) {
-  const quiz = content.quizzes.find((q) => "q-" + q.id === encId);
-  if (!quiz) return null;
-  return {
-    id: encId, kind: "rescue", name: quiz.name, sprite: quiz.sprite,
-    threat: 65, intent: [{ bar: "h", dmg: 15 }],
-    help: { label: "呼叫专业急救（120）", cost: 2, cut: 25 },
-    desc: "突然发生的紧急情况，先做对的那一步。",
-  };
 }
 
 function hashStr(s) {

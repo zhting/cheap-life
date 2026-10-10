@@ -5,7 +5,7 @@
  */
 
 /** 规则版本：params.js 或数据变了就 +1；不同版本存档明说读不了 */
-export const RULES_VERSION = 1;
+export const RULES_VERSION = 2;
 
 /** 章节：13 章 × 5 年，18 岁到 83 岁 */
 export const CHAPTERS = 13;
@@ -85,8 +85,8 @@ export const QUIZ_ALL_WRONG_MULT = 13000;
 export const ENCOUNTERS_PER_CHAPTER = 2;
 export const ENCOUNTERS_PER_CHAPTER_OLD = 3;
 export const ENCOUNTERS_OLD_AGE = 38;
-/** 稀有事件替换概率 8%；机遇事件 12% */
-export const RARE_CHANCE = 800; // 千分比
+/** 稀有事件替换概率 8%；机遇事件 12%（概率参数统一用千分比，调用处直接传 permille） */
+export const RARE_CHANCE = 80; // 千分比
 export const CHANCE_CHANCE = 120; // 千分比
 /** 连续两章没有机遇事件，下一章机遇权重 ×3 */
 export const CHANCE_PITY_MULT = 3;
@@ -120,7 +120,7 @@ export const TEMPT_PEEK_AP = 1;
 
 /** 人生事件：每章最多 1 个；受剧本和标志位控制 */
 export const LIFE_EVENT_MAX_PER_CHAPTER = 1;
-/** 小镇随机事件出现概率（千分比） */
+/** 小镇随机事件出现概率：600 千分比 = 60% */
 export const TOWN_EVENT_CHANCE = 600;
 
 /** 结算分数：结束年龄 × 10 + 状态项；活到结局时状态项 = (健康+自由+精力)×2 + min(积蓄,300)÷3 */
