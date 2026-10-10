@@ -73,6 +73,10 @@ function costTags(cost) {
   return `<span class="costs">${tags.join(" · ") || "零成本"}</span>`;
 }
 
+function escHtml(t) {
+  return String(t == null ? "" : t).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+}
+
 function barName(bar) {
   return { health: "健康", money: "积蓄", energy: "精力", freedom: "自由" }[bar] || bar;
 }
@@ -523,11 +527,14 @@ export function showEndingPanel(opts) {
 /* ---------------- 菜单 ---------------- */
 
 export function showMenuPanel(opts) {
-  const { view, dispatch, hotlines, onSaveCode, onAbandon, onSettings, onClose } = opts;
+  const { view, dispatch, hotlines, onSaveCode, onAbandon, onSettings, onClose, onExit, account, syncText } = opts;
   const p = mount(`
     <div class="panel-head"><button class="btn back" data-back aria-label="返回">←</button>
       <h2>菜单</h2></div>
     <div class="panel-body">
+      <div class="menu-section menu-account">
+        <div><b>${account ? escHtml(account.username) : "游客"}</b> <span class="muted" data-sync-line>${escHtml(syncText || "")}</span></div>
+      </div>
       <div class="menu-section"><b>求助与热线</b>
         <div class="hotlines">${hotlines.map((h) => `<div class="hotline"><b>${h.num}</b> ${h.label}</div>`).join("")}</div>
         <div class="muted">游戏是简化模型，真实紧急情况请拨 120 / 110。</div>
@@ -538,6 +545,7 @@ export function showMenuPanel(opts) {
       <div class="menu-actions-row">
         <button class="btn" id="menu-settings">设置</button>
         <button class="btn" id="menu-save">复制存档码</button>
+        <button class="btn" id="menu-exit">回标题页</button>
         <button class="btn danger" id="menu-abandon">放弃本局</button>
       </div>
     </div>
@@ -555,8 +563,12 @@ export function showMenuPanel(opts) {
       p.el.querySelector("#menu-save").textContent = code.slice(0, 20) + "…";
     }
   });
+  p.el.querySelector("#menu-exit").addEventListener("click", () => {
+    closePanel();
+    if (onExit) onExit();
+  });
   p.el.querySelector("#menu-abandon").addEventListener("click", () => {
-    if (window.confirm("放弃本局？进度将清空。")) {
+    if (window.confirm(account ? "放弃本局？账号里的这局进度会被删掉。" : "放弃本局？进度将清空。")) {
       closePanel();
       onAbandon();
     }

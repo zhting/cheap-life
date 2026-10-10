@@ -74,7 +74,7 @@ export function showSettingsPanel(current, onChange, onClose) {
         <b>关于与署名</b>
         <p>《高性价比人生》像素小镇 RPG。改编自 <a href="https://github.com/eternity4719/HowToLiveBetter" target="_blank" rel="noopener">eternity4719/HowToLiveBetter</a>《高性价比人生指南》，CC BY 4.0，已做游戏化改编与摘录。游戏代码全部新写。</p>
         <p>游戏是简化模型，不构成医疗或法律建议；真实紧急情况请拨 120 或 110。</p>
-        <p>不收集数据：没有账号、统计和外部请求（Google Fonts 字体除外，加载失败回退系统字体）。</p>
+        <p>数据：登录后，服务器只保存账号名、加密过的密码、存档（种子与操作记录）和走完的人生记录；游客模式什么都不上传。没有统计和第三方请求，字体用系统自带的。</p>
       </div>
     </div>
     <div class="panel-actions"><button class="btn primary" data-back>完成</button></div>

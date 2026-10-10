@@ -17,9 +17,9 @@ import { initPanels, closePanel, closeTopPanel, panelOpen, panelDigit, showBuild
 import { loadSettings, saveSettings, applySettings, showSettingsPanel } from "./settings.js";
 import { setSound, sfx } from "./sfx.js";
 import { initA11y, A11Y } from "./a11y.js";
-import { storageAvailable, writeSave, readSave, clearSave, encodeSave, decodeSave, validateSaveShape, makeSave } from "../save/save.js";
-
-const COMMAND_NAMES = ["talk", "learn", "drop", "peek", "accept", "refuse", "fight", "engage", "end"];
+import { storageAvailable, writeSave, readSave, clearSave, encodeSave, decodeSave, validateSaveShape, makeSave, COMMAND_NAMES } from "../save/save.js";
+import { whoAmI, logout, fetchSave, fetchRuns, deleteCloudSave, makeCloudSaver } from "../save/cloud.js";
+import { renderAuth, renderHome, esc } from "./front.js";
 
 window.addEventListener("error", (e) => {
   const stack = e.error && e.error.stack ? " | " + e.error.stack.split("\n").slice(0, 4).join(" | ") : "";
@@ -42,6 +42,18 @@ let dark = false;
 let scene = "title";
 let tiredShown = false;
 let lastSaveCode = "";
+
+/* 账号：account = { id, username }；null 表示游客（只存本机） */
+let account = null;
+let serverOnline = false;
+let cloudSave = null; // 标题页拿到的云存档 { rev, save, summary, updatedAt }
+let backdrop = null; // 标题页背景的小镇
+const cloud = makeCloudSaver({
+  onStatus: (s) => updateSyncBadge(s),
+  onConflict: (info) => showConflict(info),
+  onRejected: (msg) => toast("云存档没存上：" + msg, 5000),
+  onEnded: () => { cloudSave = null; },
+});
 
 const el = {};
 const $ = (id) => document.getElementById(id);
@@ -71,18 +83,10 @@ export function boot() {
   });
   applyTheme();
 
-  // 字体加载完成后再首绘（加载失败回退系统字体）
-  const start = () => showTitle();
-  if (document.fonts && document.fonts.load) {
-    Promise.all([
-      document.fonts.load("16px 'Noto Sans SC'"),
-      document.fonts.load("16px 'Noto Serif SC'"),
-    ]).then(start).catch(start);
-    window.setTimeout(() => { if (scene === "boot") start(); }, 1500);
-    scene = "boot";
-  } else {
-    start();
-  }
+  // 系统字体，不等网字体；先问服务器登录状态再决定去登录页还是标题页
+  scene = "boot";
+  showBackdrop(true);
+  enterFront();
 
   input = makeInput(el.canvas, {});
   // 空格/回车/E：有对话先翻对话，否则交互
@@ -111,9 +115,16 @@ export function boot() {
   input.on("tap", (arg) => onTap(arg));
   input.bindDpad(el.dpadWrap);
 
-  // 设置持久化
+  // 设置持久化；关页面时把还没发出去的云存档用 keepalive 补发
   window.addEventListener("beforeunload", () => saveSettings(settings));
-  window.addEventListener("resize", () => { if (renderer && scene === "town") renderer.resize(); });
+  window.addEventListener("pagehide", () => { if (account) cloud.beacon(); });
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "hidden" && account) cloud.flush();
+  });
+  window.addEventListener("resize", () => {
+    if (renderer && scene === "town") renderer.resize();
+    if (backdrop && scene !== "town") backdrop.resize();
+  });
   window.setInterval(updatePrompt, 200);
 }
 
@@ -131,52 +142,166 @@ function toast(text, ms) {
   toast._t = window.setTimeout(() => el.toast.classList.add("hidden"), ms || 2600);
 }
 
-/* ---------------- 场景：标题页 ---------------- */
+/* ---------------- 场景：登录与标题页 ---------------- */
 
-function showTitle() {
-  scene = "title";
+/** 标题页背景：一座固定种子的小镇，黄昏，镜头缓慢漂移 */
+function showBackdrop(on) {
+  el.backdrop = el.backdrop || $("backdrop");
+  if (!el.backdrop) return;
+  el.backdrop.classList.toggle("hidden", !on);
+  document.documentElement.classList.toggle("front-mode", on);
+  if (!on) {
+    if (backdrop) backdrop.stop();
+    return;
+  }
+  if (!backdrop) {
+    const BACKDROP_SEED = 20240611;
+    const t = generateTown(BACKDROP_SEED);
+    backdrop = makeRenderer(el.backdrop, t, BACKDROP_SEED, content);
+    backdrop.prerender("young");
+    backdrop.setSeason(2);
+    backdrop.setSegment(4);
+    backdrop.attract(motionOn() ? 9 : 0);
+  }
+  backdrop.resize();
+  backdrop.start();
+}
+
+function motionOn() {
+  const reduced = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  return settings.motion && !reduced;
+}
+
+function guestChosen() {
+  try { return window.localStorage.getItem("hli-guest") === "1"; } catch { return false; }
+}
+
+function setGuestChosen(on) {
+  try {
+    if (on) window.localStorage.setItem("hli-guest", "1");
+    else window.localStorage.removeItem("hli-guest");
+  } catch { /* 存储不可用 */ }
+}
+
+async function enterFront() {
+  const r = await whoAmI();
+  serverOnline = r.online;
+  account = r.user;
+  if (account || guestChosen()) showTitle();
+  else showAuth();
+}
+
+function showFrontScene() {
   closePanel();
   hideDialog();
   if (renderer) renderer.stop();
   el.title.classList.remove("hidden");
   el.draft.classList.add("hidden");
   el.townScene.classList.add("hidden");
+  showBackdrop(true);
+}
+
+function showAuth(mode) {
+  scene = "auth";
+  showFrontScene();
+  renderAuth(el.title, {
+    online: serverOnline,
+    mode,
+    onAuthed(user) {
+      account = user;
+      setGuestChosen(false);
+      cloud.reset();
+      toast(`欢迎，${user.username}`);
+      showTitle();
+    },
+    onGuest() {
+      account = null;
+      setGuestChosen(true);
+      showTitle();
+    },
+  });
+}
+
+function localSaveSummary() {
   const saved = readSave();
-  const hasSave = saved && validateSaveShape(saved, COMMAND_NAMES);
-  el.title.innerHTML = `
-    <div class="title-box">
-      <h1>高性价比人生</h1>
-      <p class="subtitle">像素小镇 RPG · 把书里的建议走成一辈子</p>
-      <div class="title-actions">
-        <button class="btn primary" id="t-new">新的一局</button>
-        ${hasSave ? '<button class="btn" id="t-continue">继续上局</button>' : ""}
-        <button class="btn" id="t-load">粘贴存档码</button>
-      </div>
-      <div class="title-seed hidden" id="t-seedbox">
-        <input id="t-seed" inputmode="numeric" placeholder="种子（留空随机）">
-        <button class="btn small" id="t-seed-go">用这个种子开局</button>
-      </div>
-      <p class="title-notice" id="t-notice-line">内容提示：含意外急救、慢病、金钱诈骗、法律等话题，建议 18 岁以上；游戏数值是设定，不构成医疗或法律建议。</p>
-      <p class="attribution">改编自 <a href="https://github.com/eternity4719/HowToLiveBetter" target="_blank" rel="noopener">eternity4719/HowToLiveBetter</a>《高性价比人生指南》，CC BY 4.0，已做游戏化改编与摘录</p>
-      ${storageAvailable() ? "" : '<p class="warn-text">无法自动存档，请复制存档码保存进度。</p>'}
-    </div>
-  `;
-  el.title.querySelector("#t-new").addEventListener("click", () => {
-    const proceed = () => {
-      el.title.querySelector("#t-seedbox").classList.toggle("hidden");
-    };
-    if (!noticeOk()) showNotice(proceed);
-    else proceed();
+  if (!saved || !validateSaveShape(saved, COMMAND_NAMES)) return null;
+  const r = replay(saved.seed, saved.opts, saved.log);
+  if (!r.ok || r.state.ended) return null;
+  const st = r.state;
+  return {
+    save: saved,
+    summary: {
+      chapter: st.chapter, age: st.age, job: st.script.cards.job.name, habits: st.habits.length,
+      bars: { health: Math.round(st.bars.health), money: Math.round(st.bars.money), energy: Math.round(st.bars.energy), freedom: Math.round(st.bars.freedom) },
+    },
+  };
+}
+
+async function showTitle() {
+  scene = "title";
+  showFrontScene();
+  const local = localSaveSummary();
+  const base = {
+    user: account,
+    storageOk: storageAvailable(),
+    onContinue,
+    onNewIntent(proceed) {
+      if (!noticeOk()) showNotice(() => { markNotice(); proceed(); });
+      else proceed();
+    },
+    onNew(s) { startDraft(s == null ? randomSeed() : s); },
+    onPaste: pasteSaveCode,
+    onLogin: () => showAuth("login"),
+    onLogout: doLogout,
+    onImportLocal: importLocal,
+  };
+  if (!account) {
+    cloudSave = null;
+    renderHome(el.title, { ...base, save: local ? { summary: local.summary, updatedAt: null } : null });
+    return;
+  }
+  renderHome(el.title, { ...base, loading: true });
+  const [sv, rn] = await Promise.all([fetchSave(), fetchRuns()]);
+  if (scene !== "title") return;
+  if (sv.status === 401) {
+    account = null;
+    showAuth("login");
+    return;
+  }
+  cloudSave = sv.ok && sv.data.save ? sv.data : null;
+  cloud.setRev(sv.ok ? sv.data.rev : cloud.rev);
+  renderHome(el.title, {
+    ...base,
+    save: cloudSave,
+    runs: rn.ok ? rn.data : null,
+    localSave: local ? local.summary : null,
+    error: sv.ok ? "" : "读取云存档失败：" + (sv.data.error || "网络问题"),
   });
-  const seedBtn = el.title.querySelector("#t-seed-go");
-  if (seedBtn) seedBtn.addEventListener("click", () => {
-    const v = Number(el.title.querySelector("#t-seed").value);
-    const s = Number.isInteger(v) && v > 0 ? (v >>> 0) : randomSeed();
-    startDraft(s);
-  });
-  const cont = el.title.querySelector("#t-continue");
-  if (cont) cont.addEventListener("click", () => continueSaved(saved));
-  el.title.querySelector("#t-load").addEventListener("click", () => pasteSaveCode());
+
+  function onContinue() {
+    if (account && cloudSave) continueSaved(cloudSave.save);
+    else if (!account && local) continueSaved(local.save);
+  }
+  async function importLocal() {
+    if (!local) return;
+    cloud.queue(local.save);
+    await cloud.flush();
+    if (cloud.status === "saved") {
+      clearSave();
+      toast("这台设备上的进度已存进账号");
+    }
+    showTitle();
+  }
+}
+
+async function doLogout() {
+  await cloud.flush();
+  await logout();
+  account = null;
+  cloudSave = null;
+  cloud.reset();
+  setGuestChosen(false);
+  showAuth("login");
 }
 
 function noticeOk() {
@@ -219,9 +344,9 @@ function renderDraft() {
   const { state: st } = create(seed, opts);
   const sc = st.script;
   el.draft.innerHTML = `
-    <div class="draft-box">
+    <div class="draft-box win">
       <h2>你的人生剧本</h2>
-      <p class="muted">开局抽四张牌，可以整套重抽一次。种子 ${seed}</p>
+      <p class="muted">开局抽四张牌，不满意可以整套重抽一次。种子 ${seed}</p>
       <div class="draft-cards">
         ${draftCard("出身", sc.cards.origin)}
         ${draftCard("体质", sc.cards.physique)}
@@ -245,7 +370,8 @@ function renderDraft() {
 }
 
 function draftCard(cat, card) {
-  return `<div class="draft-card"><div class="draft-cat">${cat}</div><b>${card.name}</b><div class="muted">${card.desc}</div></div>`;
+  const kind = { 出身: "origin", 体质: "body", 性格: "mind", 职业: "job" }[cat] || "origin";
+  return `<div class="draft-card draft-${kind}"><div class="draft-cat">${cat}</div><b>${card.name}</b><div class="draft-desc">${card.desc}</div></div>`;
 }
 
 /* ---------------- 场景：小镇 ---------------- */
@@ -254,6 +380,7 @@ function startTown(s, o, savedLog) {
   seed = s >>> 0;
   opts = o || { reroll: 0 };
   tiredShown = false;
+  cloud.reset(); // 丢掉上一局没发出去的存档；版本号沿用标题页拿到的
   if (savedLog) {
     const r = replay(seed, opts, savedLog);
     if (!r.ok) {
@@ -272,6 +399,8 @@ function startTown(s, o, savedLog) {
   town = generateTown(seed);
   spots = computeSpots(town);
   scene = "town";
+  showBackdrop(false);
+  updateSyncBadge(cloud.status);
   el.title.classList.add("hidden");
   el.draft.classList.add("hidden");
   el.townScene.classList.remove("hidden");
@@ -369,8 +498,96 @@ function dispatch(cmd) {
 }
 
 function autosave() {
+  const save = makeSave(seed, opts, log);
+  if (account) {
+    cloud.queue(save);
+    return;
+  }
   if (!storageAvailable()) return;
-  writeSave(makeSave(seed, opts, log));
+  writeSave(save);
+}
+
+/* ---------------- 云存档状态 ---------------- */
+
+const SYNC_TEXT = {
+  saved: "已存到账号",
+  saving: "正在保存…",
+  pending: "没连上服务器，稍后自动重试",
+  conflict: "别处有更新的进度",
+  error: "云存档没存上",
+};
+
+function syncText() {
+  if (!account) return storageAvailable() ? "游客模式 · 存在这台设备上" : "游客模式 · 这个浏览器不能自动存档";
+  const t = SYNC_TEXT[cloud.status] || "";
+  if (cloud.status === "saved" && cloud.lastSavedAt) {
+    const s = Math.round((Date.now() - cloud.lastSavedAt) / 1000);
+    return t + (s < 60 ? " · 刚刚" : ` · ${Math.floor(s / 60)} 分钟前`);
+  }
+  return t;
+}
+
+function updateSyncBadge(status) {
+  const badge = $("sync-badge");
+  if (badge) {
+    const bad = status === "pending" || status === "conflict" || status === "error";
+    badge.classList.toggle("hidden", !account);
+    badge.classList.toggle("bad", bad);
+    badge.classList.toggle("busy", status === "saving");
+    badge.textContent = bad ? "未存上" : status === "saving" ? "保存中" : "已存档";
+    badge.title = syncText();
+  }
+  const line = document.querySelector("[data-sync-line]");
+  if (line) line.textContent = syncText();
+}
+
+/** 别的设备先写过：让玩家选用哪一份 */
+function showConflict(info) {
+  const sum = info && info.summary;
+  const there = sum ? `第${sum.chapter}章 · ${sum.age} 岁` : "已经结束或被放弃";
+  const here = `第${state ? state.chapter : "?"}章 · ${state ? state.age : "?"} 岁`;
+  if (renderer) renderer.setPaused(true);
+  const box = document.createElement("div");
+  box.className = "panel notice win";
+  box.setAttribute("role", "alertdialog");
+  box.setAttribute("aria-label", "存档冲突");
+  box.innerHTML = `
+    <div class="panel-head"><h2>账号在别处有更新的进度</h2></div>
+    <div class="panel-body">
+      <p>这个账号在另一台设备或另一个标签页里也在玩，两边的进度对不上了。</p>
+      <div class="conflict-grid">
+        <div class="card"><div class="muted">账号里的</div><b>${esc(there)}</b></div>
+        <div class="card"><div class="muted">这里的</div><b>${esc(here)}</b></div>
+      </div>
+      <p class="muted">选了就会覆盖另一份，没法撤回。</p>
+    </div>
+    <div class="panel-actions">
+      <button class="btn primary" data-keep="cloud">读取账号里的进度</button>
+      <button class="btn" data-keep="here">用这里的覆盖账号</button>
+    </div>`;
+  el.overlay.appendChild(box);
+  box.querySelector("button").focus();
+  box.querySelector('[data-keep="cloud"]').addEventListener("click", async () => {
+    box.remove();
+    cloud.reset();
+    const r = await fetchSave();
+    if (r.ok) {
+      cloud.setRev(r.data.rev);
+      cloudSave = r.data.save ? r.data : null;
+      if (r.data.save) {
+        startTown(r.data.save.seed, r.data.save.opts, r.data.save.log);
+        toast("已读取账号里的进度");
+        return;
+      }
+    }
+    showTitle();
+  });
+  box.querySelector('[data-keep="here"]').addEventListener("click", async () => {
+    box.remove();
+    if (renderer) renderer.setPaused(false);
+    await cloud.forceOverwrite();
+    if (cloud.status === "saved") toast("已用这里的进度覆盖账号");
+  });
 }
 
 function handleEvents(events, cmd) {
@@ -401,7 +618,7 @@ function handleEvents(events, cmd) {
       }
       case "town": {
         const ev = content.townEvents.events.find((x) => x.id === e.id);
-        if (ev && e !== events[0]) toast("小镇：" + ev.text);
+        if (ev && e !== events[0] && !isEnd) toast("小镇：" + ev.text); // 章末的写进结算面板
         break;
       }
       case "peek": {
@@ -615,8 +832,21 @@ function openMenu() {
     dispatch,
     hotlines: data.hotlines,
     onSaveCode: () => encodeSave(makeSave(seed, opts, log)),
-    onAbandon() {
-      clearSave();
+    account: account ? { username: account.username } : null,
+    syncText: syncText(),
+    async onAbandon() {
+      if (account) {
+        cloud.reset();
+        const r = await deleteCloudSave(cloud.rev);
+        if (r.ok) cloud.setRev(0);
+        cloudSave = null;
+      } else {
+        clearSave();
+      }
+      showTitle();
+    },
+    async onExit() {
+      if (account) await cloud.flush();
       showTitle();
     },
     onSettings() {
@@ -656,7 +886,14 @@ function showSettle(events) {
 }
 
 async function showEnding(ended) {
-  clearSave();
+  if (account) {
+    // 最后一条命令已经排进云存档；立刻发出去，服务器会把这一局归档进「走完的人生」
+    cloud.flush().then(() => {
+      if (cloud.status !== "saved") toast("这一局的结局还没存进账号，联网后会自动补存", 4000);
+    });
+  } else {
+    clearSave();
+  }
   hideDialog();
   lastSaveCode = await encodeSave(makeSave(seed, opts, log));
   const v = currentView();
@@ -763,6 +1000,10 @@ if (new URLSearchParams(window.location.search).get("debug") !== null) {
     renderer() { return renderer; },
     legal: () => legal(state),
     fightPreview,
+    openBuilding(id) { const b = town.buildings.find((x) => x.id === id); if (b) openBuilding(b); },
+    openBattle,
+    openTempt,
+    cloud: () => ({ status: cloud.status, rev: cloud.rev }),
   };
 }
 
