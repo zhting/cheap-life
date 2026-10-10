@@ -110,6 +110,19 @@ export function makeRenderer(canvas, town, seed, content) {
     view.camY = Math.max(0, Math.min(h * TILE - view.rows * TILE, walker.py + TILE / 2 - (view.rows * TILE) / 2));
   }
 
+  /* ---- 标题页背景：镜头沿地图缓慢来回平移 ---- */
+  let attract = null;
+  function driftCam(dt) {
+    const maxX = Math.max(0, w * TILE - view.cols * TILE);
+    const maxY = Math.max(0, h * TILE - view.rows * TILE);
+    attract.x += attract.vx * dt;
+    attract.y += attract.vy * dt;
+    if (attract.x < 0 || attract.x > maxX) { attract.vx = -attract.vx; attract.x = Math.max(0, Math.min(maxX, attract.x)); }
+    if (attract.y < 0 || attract.y > maxY) { attract.vy = -attract.vy; attract.y = Math.max(0, Math.min(maxY, attract.y)); }
+    view.camX = attract.x;
+    view.camY = attract.y;
+  }
+
   /* ---- 交互探测：玩家附近可交互的东西 ---- */
   function nearInteractable() {
     if (!walker) return null;
@@ -134,7 +147,8 @@ export function makeRenderer(canvas, town, seed, content) {
         if (interactProbe.cb) interactProbe.cb();
       });
     }
-    centerCam();
+    if (attract) driftCam(dt);
+    else centerCam();
     draw(t);
   }
 
@@ -256,7 +270,17 @@ export function makeRenderer(canvas, town, seed, content) {
       if (p) state.held.up = state.held.down = state.held.left = state.held.right = false;
     },
     setSegment(seg) { state.segment = seg; },
-    setSeason(idx) { state.season = idx; prerender(stageName); },
+    setSeason(idx) {
+      // 季节没变就不重画整张离屏层（每条命令都会刷新状态栏）
+      if (state.season === idx && api.prerendered) return;
+      state.season = idx;
+      api.prerendered = true;
+      prerender(stageName);
+    },
+    /** 标题页背景模式：没有玩家，镜头自己漂；speed 为每秒像素 */
+    attract(speed) {
+      attract = { x: (w * TILE) / 3, y: (h * TILE) / 3, vx: speed, vy: speed * 0.45 };
+    },
     setOverlays(list) { state.overlays = list; },
     walkTo(gx, gy) {
       if (!walker) return false;

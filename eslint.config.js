@@ -25,7 +25,7 @@ const coreRestrictedGlobals = ["window", "document", "localStorage", "performanc
 export default [
   js.configs.recommended,
   {
-    ignores: ["dist/**", "node_modules/**", "book/**", "tools/reports/**"],
+    ignores: ["dist/**", "node_modules/**", "book/**", "tools/reports/**", "var/**"],
   },
   {
     files: ["src/core/**/*.js"],
@@ -87,9 +87,9 @@ export default [
     },
   },
   {
-    files: ["tools/**/*.{js,mjs}", "tests/**/*.{js,mjs}"],
+    files: ["tools/**/*.{js,mjs}", "tests/**/*.{js,mjs}", "server/**/*.mjs"],
     languageOptions: {
-      globals: { ...browserGlobals, console: "readonly", process: "readonly", performance: "readonly", URL: "readonly", URLSearchParams: "readonly", fetch: "readonly" },
+      globals: { ...browserGlobals, console: "readonly", process: "readonly", performance: "readonly", URL: "readonly", URLSearchParams: "readonly", fetch: "readonly", Buffer: "readonly" },
     },
     rules: {},
   },

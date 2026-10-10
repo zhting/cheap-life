@@ -9,6 +9,9 @@ import { RULES_VERSION } from "../core/params.js";
 
 const KEY = "hli-save-v1";
 
+/** 存档里允许出现的命令名（客户端读档与服务器校验共用） */
+export const COMMAND_NAMES = ["talk", "learn", "drop", "peek", "accept", "refuse", "fight", "engage", "end"];
+
 export function storageAvailable() {
   try {
     const k = "__hli_test__";
